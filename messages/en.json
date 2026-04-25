@@ -1,0 +1,18 @@
+{
+  "nav": {
+    "services": "Services",
+    "about": "About",
+    "proof": "Proof",
+    "trustGrowth": "SMM Growth",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "login": "Login",
+    "getStarted": "Get started",
+    "signOut": "Sign out"
+  },
+  "lang": {
+    "switchToArabic": "العربية",
+    "switchToEnglish": "English"
+  }
+}
+

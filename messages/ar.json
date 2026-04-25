@@ -1,0 +1,18 @@
+{
+  "nav": {
+    "services": "الخدمات",
+    "about": "من نحن",
+    "proof": "النتائج",
+    "trustGrowth": "نمو التسويق عبر السوشيال",
+    "dashboard": "لوحة التحكم",
+    "admin": "الإدارة",
+    "login": "تسجيل الدخول",
+    "getStarted": "ابدأ الآن",
+    "signOut": "تسجيل الخروج"
+  },
+  "lang": {
+    "switchToArabic": "العربية",
+    "switchToEnglish": "English"
+  }
+}
+

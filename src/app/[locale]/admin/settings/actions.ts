@@ -1,0 +1,143 @@
+"use server";
+
+import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/rbac";
+import { Prisma } from "@prisma/client";
+
+type Input = {
+  twitterUrl?: string;
+  linkedinUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  youtubeUrl?: string;
+};
+
+function normUrl(v: unknown) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : null;
+}
+
+export async function updateSocialLinksAction(formData: FormData) {
+  await requireRole("PLATFORM_ADMIN");
+
+  const input: Input = {
+    twitterUrl: String(formData.get("twitterUrl") ?? ""),
+    linkedinUrl: String(formData.get("linkedinUrl") ?? ""),
+    facebookUrl: String(formData.get("facebookUrl") ?? ""),
+    instagramUrl: String(formData.get("instagramUrl") ?? ""),
+    youtubeUrl: String(formData.get("youtubeUrl") ?? ""),
+  };
+
+  await prisma.siteSettings.upsert({
+    where: { id: 1 },
+    create: {
+      id: 1,
+      twitterUrl: normUrl(input.twitterUrl),
+      linkedinUrl: normUrl(input.linkedinUrl),
+      facebookUrl: normUrl(input.facebookUrl),
+      instagramUrl: normUrl(input.instagramUrl),
+      youtubeUrl: normUrl(input.youtubeUrl),
+    },
+    update: {
+      twitterUrl: normUrl(input.twitterUrl),
+      linkedinUrl: normUrl(input.linkedinUrl),
+      facebookUrl: normUrl(input.facebookUrl),
+      instagramUrl: normUrl(input.instagramUrl),
+      youtubeUrl: normUrl(input.youtubeUrl),
+    },
+  });
+
+  return { ok: true as const };
+}
+
+type MarketingLocale = "en" | "ar";
+
+type MarketingContent = {
+  en?: Record<string, unknown>;
+  ar?: Record<string, unknown>;
+};
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function normText(v: unknown) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : "";
+}
+
+function normLines(v: unknown) {
+  const s = String(v ?? "");
+  return s
+    .split(/\r?\n/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function parseQuotesLines(lines: string[]) {
+  // One per line: quote|name|role
+  return lines
+    .map((line) => line.split("|").map((p) => p.trim()))
+    .filter((parts) => parts.length >= 1 && parts[0])
+    .map(([quote, name, role]) => ({
+      quote,
+      name: name ?? "",
+      role: role ?? "",
+    }))
+    .filter((q) => q.quote.length > 0);
+}
+
+export async function updateMarketingContentAction(formData: FormData) {
+  await requireRole("PLATFORM_ADMIN");
+
+  const current = await prisma.siteSettings.findUnique({ where: { id: 1 } });
+  const existing = (current?.marketingContent ?? {}) as MarketingContent;
+
+  const locales: MarketingLocale[] = ["en", "ar"];
+  const next: MarketingContent = { ...existing };
+
+  for (const locale of locales) {
+    const aboutKicker = normText(formData.get(`mc_${locale}_about_kicker`));
+    const aboutTitle = normText(formData.get(`mc_${locale}_about_title`));
+    const aboutBody = normText(formData.get(`mc_${locale}_about_body`));
+    const aboutBullets = normLines(formData.get(`mc_${locale}_about_bullets`));
+
+    const proofTitle = normText(formData.get(`mc_${locale}_proof_title`));
+    const proofSubtitle = normText(formData.get(`mc_${locale}_proof_subtitle`));
+    const proofQuotes = parseQuotesLines(
+      normLines(formData.get(`mc_${locale}_proof_quotes`)),
+    );
+
+    const contactTitle = normText(formData.get(`mc_${locale}_contact_title`));
+    const contactEmail = normText(formData.get(`mc_${locale}_contact_email`));
+    const contactWebsite = normText(formData.get(`mc_${locale}_contact_website`));
+
+    const navAbout = normText(formData.get(`mc_${locale}_nav_about`));
+    const navProof = normText(formData.get(`mc_${locale}_nav_proof`));
+
+    const existingLocale = existing?.[locale];
+    const baseLocale = isRecord(existingLocale) ? existingLocale : {};
+    const existingNav = isRecord(baseLocale.nav) ? baseLocale.nav : {};
+
+    next[locale] = {
+      ...baseLocale,
+      nav: {
+        ...existingNav,
+        about: navAbout,
+        proof: navProof,
+      },
+      about: { kicker: aboutKicker, title: aboutTitle, body: aboutBody, bullets: aboutBullets },
+      proof: { title: proofTitle, subtitle: proofSubtitle, quotes: proofQuotes },
+      contact: { title: contactTitle, email: contactEmail, website: contactWebsite },
+    };
+  }
+
+  await prisma.siteSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1, marketingContent: next as unknown as Prisma.InputJsonValue },
+    update: { marketingContent: next as unknown as Prisma.InputJsonValue },
+  });
+
+  return { ok: true as const };
+}
+

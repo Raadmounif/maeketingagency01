@@ -1,0 +1,295 @@
+"use client";
+
+import Image from "next/image";
+import { startTransition, useEffect, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
+import { useLocale, useTranslations } from "next-intl";
+import { getPathname, Link, usePathname, useRouter } from "@/i18n/routing";
+
+type NavOverrides = {
+  about?: string;
+  proof?: string;
+};
+
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <span className="relative block h-5 w-6" aria-hidden>
+      <span
+        className={[
+          "absolute left-0 top-1 block h-0.5 w-6 rounded-full bg-white transition",
+          open ? "translate-y-1.5 rotate-45" : "",
+        ].join(" ")}
+      />
+      <span
+        className={[
+          "absolute left-0 top-2.5 block h-0.5 w-6 rounded-full bg-white transition",
+          open ? "opacity-0" : "",
+        ].join(" ")}
+      />
+      <span
+        className={[
+          "absolute left-0 top-4 block h-0.5 w-6 rounded-full bg-white transition",
+          open ? "-translate-y-1.5 -rotate-45" : "",
+        ].join(" ")}
+      />
+    </span>
+  );
+}
+
+export function SiteHeader({ navOverrides }: { navOverrides?: NavOverrides }) {
+  const pathname = usePathname();
+  const [navHydrated, setNavHydrated] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    startTransition(() => {
+      setNavHydrated(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    startTransition(() => {
+      setMenuOpen(false);
+    });
+  }, [pathname]);
+
+  const { data } = useSession();
+  const t = useTranslations();
+  const locale = useLocale();
+  const router = useRouter();
+  const role = (data?.user as unknown as { role?: string })?.role;
+  const isAdmin = role === "PLATFORM_ADMIN";
+  const isArabic = locale === "ar";
+
+  const links: Array<{ href: string; label: string }> = [
+    { href: "/#services", label: t("nav.services") },
+    { href: "/#about", label: navOverrides?.about?.trim() || t("nav.about") },
+    { href: "/#proof", label: navOverrides?.proof?.trim() || t("nav.proof") },
+    { href: "/trust", label: t("nav.trustGrowth") },
+  ];
+
+  function switchLocale() {
+    const nextLocale = isArabic ? "en" : "ar";
+    router.replace(pathname || "/", { locale: nextLocale });
+    setMenuOpen(false);
+  }
+
+  function linkActive(href: string) {
+    return (
+      navHydrated &&
+      !href.startsWith("/#") &&
+      (pathname === href || pathname.startsWith(`${href}/`))
+    );
+  }
+
+  const navLinkClass = (href: string, mobile = false) =>
+    [
+      mobile ? "min-h-12 w-full justify-between px-4 text-base" : "px-3 py-2 text-sm",
+      "inline-flex items-center rounded-xl font-medium transition",
+      linkActive(href)
+        ? "bg-white/15 text-white"
+        : "text-white/75 hover:bg-white/10 hover:text-white",
+    ].join(" ");
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#1F3A5F] text-white shadow-md shadow-black/10">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:h-[4.25rem]">
+        <Link
+          href="/"
+          className="flex min-w-0 shrink items-center gap-2 sm:gap-3"
+          onClick={() => setMenuOpen(false)}
+        >
+          <Image
+            src="/brand/palmyrashift-logo.png"
+            alt="PalmyraShift"
+            width={40}
+            height={40}
+            className="h-9 w-9 shrink-0 rounded-lg bg-white/95 object-contain p-0.5 sm:h-10 sm:w-10"
+            priority
+          />
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-sm font-semibold tracking-tight text-white">
+              PalmyraShift
+            </div>
+            <div className="truncate text-[11px] text-white/65 sm:text-xs">
+              palmyrashift.com
+            </div>
+          </div>
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className={navLinkClass(l.href, false)}>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={switchLocale}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-2.5 text-sm font-semibold text-white active:bg-white/20 sm:min-h-10 sm:min-w-10 sm:px-3"
+            aria-label={isArabic ? "Switch to English" : "Switch to Arabic"}
+            title={isArabic ? "English" : "العربية"}
+          >
+            {isArabic ? "EN" : "AR"}
+          </button>
+
+          <div className="hidden items-center gap-2 md:flex">
+            {data?.user ? (
+              <>
+                {isAdmin ? (
+                  <Link
+                    href="/admin"
+                    className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+                  >
+                    {t("nav.admin")}
+                  </Link>
+                ) : null}
+                <Link
+                  href="/dashboard"
+                  className="rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                >
+                  {t("nav.dashboard")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() =>
+                    signOut({
+                      callbackUrl: getPathname({ locale, href: "/" }),
+                    })
+                  }
+                  className="min-h-10 rounded-xl border border-white/20 bg-white/10 px-3 text-sm font-semibold text-white transition hover:bg-white/15"
+                >
+                  {t("nav.signOut")}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="min-h-10 rounded-xl px-3 text-sm font-medium text-white/80 transition hover:bg-white/10 hover:text-white"
+                >
+                  {t("nav.login")}
+                </Link>
+                <Link
+                  href="/register"
+                  className="min-h-10 rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 py-2 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-900/20 transition hover:brightness-105"
+                >
+                  {t("nav.getStarted")}
+                </Link>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 md:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>
+            <MenuIcon open={menuOpen} />
+          </button>
+        </div>
+      </div>
+
+      {menuOpen ? (
+        <button
+          type="button"
+            className="fixed inset-0 top-14 z-40 bg-black/50 sm:top-16 md:hidden"
+          aria-label="Close menu"
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
+
+      {menuOpen ? (
+        <div
+          id="mobile-nav"
+          className="fixed inset-x-0 bottom-0 top-14 z-50 flex max-h-[calc(100dvh-3.5rem)] flex-col bg-[#152d4d] px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-xl sm:top-16 sm:max-h-[calc(100dvh-4rem)] md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+        >
+          <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain py-2">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={navLinkClass(l.href, true)}
+                onClick={() => setMenuOpen(false)}
+              >
+                <span>{l.label}</span>
+                <span aria-hidden className="text-white/40">
+                  →
+                </span>
+              </Link>
+            ))}
+          </nav>
+
+          <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 pt-4">
+            {data?.user ? (
+              <>
+                {isAdmin ? (
+                  <Link
+                    href="/admin"
+                    className="flex min-h-12 items-center justify-center rounded-xl bg-white/10 px-4 text-base font-semibold text-white active:bg-white/20"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {t("nav.admin")}
+                  </Link>
+                ) : null}
+                <Link
+                  href="/dashboard"
+                  className="flex min-h-12 items-center justify-center rounded-xl border border-white/15 px-4 text-base font-medium text-white/90 active:bg-white/10"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {t("nav.dashboard")}
+                </Link>
+                <button
+                  type="button"
+                  className="flex min-h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-base font-semibold text-white active:bg-white/20"
+                  onClick={() =>
+                    signOut({
+                      callbackUrl: getPathname({ locale, href: "/" }),
+                    })
+                  }
+                >
+                  {t("nav.signOut")}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="flex min-h-12 items-center justify-center rounded-xl border border-white/15 px-4 text-base font-medium text-white/90 active:bg-white/10"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {t("nav.login")}
+                </Link>
+                <Link
+                  href="/register"
+                  className="flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-base font-semibold text-[#1F3A5F] shadow-md active:brightness-95"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {t("nav.getStarted")}
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </header>
+  );
+}
