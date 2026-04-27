@@ -27,11 +27,6 @@ export function Features() {
           <h2 className="text-2xl font-bold tracking-tight text-[#1F3A5F] sm:text-3xl md:text-4xl">
             Services
           </h2>
-          <p className="mt-3 text-base leading-relaxed text-[#2C4E7A]/85 sm:mt-4 sm:text-lg">
-            Each module is its own path under your brand—shared login, clear
-            ownership. We&apos;re shipping the catalog one service at a time,
-            starting with SMM Growth.
-          </p>
         </div>
 
         <div className={`mt-8 grid gap-4 sm:mt-12 sm:gap-6 ${gridClass}`}>
