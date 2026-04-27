@@ -11,16 +11,5 @@ export async function SiteHeaderServer() {
         ?.balanceCents ?? 0
     : null;
 
-  const paymentMethods = await prisma.paymentMethod.findMany({
-    where: { enabled: true },
-    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      name: true,
-      descriptionText: true,
-      descriptionMediaUrl: true,
-    },
-  });
-
-  return <SiteHeader walletBalanceCents={walletBalanceCents} paymentMethods={paymentMethods} />;
+  return <SiteHeader walletBalanceCents={walletBalanceCents} />;
 }
