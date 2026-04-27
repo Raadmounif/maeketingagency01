@@ -63,7 +63,7 @@ export default async function AdminSettingsPage() {
               Landing page sections
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-[#2C4E7A]/85">
-              Edit the section names and content for About, Proof, Value proposition, and Contact.
+              Edit the home page advertising board (hero), section names, and content for About, Proof, and Contact.
               Saved content is per-language (English/Arabic).
             </p>
           </div>

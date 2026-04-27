@@ -1,5 +1,7 @@
 {
   "nav": {
+    "welcome": "مرحبًا، {name}",
+    "welcomeFallback": "ضيف",
     "services": "الخدمات",
     "about": "من نحن",
     "proof": "النتائج",
@@ -13,6 +15,69 @@
   "lang": {
     "switchToArabic": "العربية",
     "switchToEnglish": "English"
+  },
+  "smmTrust": {
+    "hero": {
+      "kicker": "🚀 السيرفر رقم 1 في الشرق الأوسط",
+      "title": "عزّز وجودك الرقمي مع SMM Growth",
+      "subtitle": "خدمات التسويق عبر السوشيال من لوحة واحدة — أسعار واضحة، سرعة، وموثوقية.",
+      "login": "تسجيل الدخول",
+      "register": "إنشاء حساب"
+    },
+    "order": {
+      "sectionTitle": "إنشاء طلب",
+      "sectionHelp": "يمكن للجميع تصفح الخدمات أدناه. لإرسال طلب: أنشئ حسابًا، سجّل الدخول، أضِف رصيدًا من لوحة التحكم، وتأكد أن رصيدك يغطي التكلفة التقديرية.",
+      "guestBrowseHint": "جميع خدمات الكتالوج والأقسام والعروض اليدوية تظهر دون تسجيل. الطلب يتطلب حسابًا وتسجيل دخول ورصيدًا كافيًا.",
+      "walletBalance": "رصيد المحفظة: ${amount} دولار",
+      "estimatedCharge": "التكلفة التقديرية: ${amount} دولار",
+      "insufficientBalance": "رصيد محفظتك غير كافٍ لهذا الطلب.",
+      "dashboardLink": "افتح لوحة التحكم لإضافة رصيد",
+      "needLoginToOrder": "لإرسال طلب، سجّل الدخول أو أنشئ حسابًا.",
+      "adminLink": "إدارة SMM",
+      "service": "الخدمة",
+      "chooseService": "اختر…",
+      "link": "الرابط",
+      "linkPlaceholder": "https://…",
+      "quantity": "الكمية",
+      "quantityPlaceholder": "1000",
+      "placeOrder": "إرسال الطلب",
+      "placing": "جاري الإرسال…",
+      "orderSuccess": "تم إنشاء الطلب (المرجع {id}).",
+      "min": "الحد الأدنى",
+      "max": "الحد الأقصى"
+    },
+    "clientOffers": {
+      "sectionTitle": "عروض مميزة",
+      "sectionHelp": "كل بطاقة هي عرض واحد حددته من الإدارة. السعر والكميات ثابتة؛ العميل فقط يضع الروابط.",
+      "productLabel": "عرض",
+      "openOffer": "عرض التفاصيل",
+      "modalSubtitle": "ضع الروابط. الكميات والسعر النهائي ثابتة من الإدارة.",
+      "optionCount": "{count} خدمات",
+      "finalPrice": "السعر النهائي: ${amount} دولار",
+      "fixedQuantity": "الكمية: {qty}",
+      "urlPlaceholder": "ضع الرابط…",
+      "placeOffer": "إرسال طلب العرض",
+      "offerOrderSuccess": "تم إنشاء طلب العرض (المرجع {id})."
+    },
+    "manualServices": {
+      "sectionTitle": "خدمات أخرى",
+      "sectionHelp": "",
+      "empty": "لا توجد خدمات معروضة حاليًا.",
+      "order": "اطلب",
+      "loginToOrder": "سجّل الدخول للطلب",
+      "confirmTitle": "تأكيد الطلب",
+      "noteLabel": "ملاحظة للفريق (اختياري)",
+      "notePlaceholder": "روابط، أهداف، مواعيد…",
+      "cancel": "إلغاء",
+      "submitOrder": "إرسال الطلب",
+      "placing": "جاري الإرسال…",
+      "orderSuccess": "تم إنشاء الطلب (المرجع {id}). سنتابع معك."
+    },
+    "topServices": {
+      "title": "الأكثر طلبًا",
+      "subtitle": "أفضل 10 (طلبات مكتملة)",
+      "orders": "{count} طلب"
+    }
   }
 }
 

@@ -1,72 +1,212 @@
-import { Link } from "@/i18n/routing";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { getLocale } from "next-intl/server";
+import { getSmmAdvertisingBoardForLocale } from "@/lib/smm/advertising-board";
+import { computeClientRateUsdPer1000, type MarkupRuleRow } from "@/lib/smm/pricing";
+import TrustClient from "./view";
 
-export default function TrustPage() {
+function applyPercentMarkup(base: number, pct: number) {
+  const p = Number(pct) || 0;
+  return base * (1 + p / 100);
+}
+
+function canAccessSmmAdmin(session: Awaited<ReturnType<typeof getSession>>): boolean {
+  const role = (session?.user as unknown as { role?: string })?.role ?? "CLIENT";
+  return role === "PLATFORM_ADMIN" || role === "SERVICE_OWNER";
+}
+
+export default async function TrustPage() {
+  const locale = await getLocale();
+  const session = await getSession();
+  const userId =
+    session?.user && "id" in session.user
+      ? String((session.user as { id: string }).id)
+      : null;
+  let walletBalanceCents: number | null = null;
+  if (userId) {
+    const wallet = await prisma.wallet.findUnique({ where: { userId } });
+    walletBalanceCents = wallet?.balanceCents ?? 0;
+  }
+  const showSmmAdminLink = canAccessSmmAdmin(session);
+  const adBoard = await getSmmAdvertisingBoardForLocale(locale);
+
+  const rules = (await prisma.smmMarkupRule.findMany({
+    orderBy: { updatedAt: "desc" },
+  })) as MarkupRuleRow[];
+
+  const manualServices = await prisma.customService.findMany({
+    where: { enabled: true },
+    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+  });
+  const manualServicesPayload = manualServices.map((s) => ({
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    priceUsd: s.priceUsd.toString(),
+  }));
+
+  /** Per-service markup when a service is assigned to a client category (admin). */
+  const clientCategoryItems = await prisma.smmClientCategoryItem.findMany({
+    select: { serviceId: true, markupPct: true },
+  });
+  const markupPctByServiceId = new Map(
+    clientCategoryItems.map((it) => [it.serviceId, it.markupPct]),
+  );
+
+  const categories = await prisma.smmCategory.findMany({
+    orderBy: [{ sort: "asc" }, { providerName: "asc" }],
+    include: {
+      services: {
+        where: { enabledForClients: true, isArchived: false },
+        orderBy: [{ providerName: "asc" }],
+      },
+    },
+  });
+
+  const visibleCategories = categories.filter((c) => c.services.length > 0);
+
+  const topOrdered = await prisma.smmOrder.groupBy({
+    by: ["serviceId"],
+    _count: { serviceId: true },
+    orderBy: { _count: { serviceId: "desc" } },
+    take: 10,
+    where: { status: "COMPLETED" },
+  });
+  const topServiceIds = topOrdered.map((t) => t.serviceId);
+  const topServicesRaw = topServiceIds.length
+    ? await prisma.smmService.findMany({
+        where: { id: { in: topServiceIds }, enabledForClients: true, isArchived: false },
+      })
+    : [];
+  const topServiceById = new Map(topServicesRaw.map((s) => [s.id, s]));
+  const topServices = topOrdered
+    .map((t) => {
+      const s = topServiceById.get(t.serviceId);
+      if (!s) return null;
+      const overridePct = markupPctByServiceId.get(s.id);
+      const rate =
+        overridePct != null
+          ? String(applyPercentMarkup(Number(s.providerRate), overridePct))
+          : String(
+              computeClientRateUsdPer1000({
+                providerRate: s.providerRate,
+                serviceId: s.id,
+                categoryId: s.categoryId,
+                rules,
+              }),
+            );
+      return {
+        id: s.id,
+        name: s.clientTitle?.trim() || s.providerName,
+        rate,
+        count: t._count.serviceId,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null);
+
+  const localeKey = locale === "ar" ? "ar" : "en";
+
+  const clientCategoriesForBundles = await prisma.smmClientCategory.findMany({
+    where: { enabled: true },
+    orderBy: [{ sort: "asc" }, { updatedAt: "desc" }],
+    include: {
+      items: {
+        orderBy: [{ sort: "asc" }, { updatedAt: "desc" }],
+        include: { service: true },
+      },
+    },
+  });
+
+  const clientBundles = clientCategoriesForBundles
+    .map((cat) => {
+      const options = cat.items
+        .filter((it) => it.service.enabledForClients && !it.service.isArchived)
+        .map((it) => {
+          const s = it.service;
+          const overridePct = markupPctByServiceId.get(s.id);
+          const rate =
+            overridePct != null
+              ? String(applyPercentMarkup(Number(s.providerRate), overridePct))
+              : String(
+                  computeClientRateUsdPer1000({
+                    providerRate: s.providerRate,
+                    serviceId: s.id,
+                    categoryId: s.categoryId,
+                    rules,
+                  }),
+                );
+          return {
+            id: s.id,
+            name: s.clientTitle?.trim() || s.providerName,
+            description: s.clientDescription?.trim() || null,
+            type: s.providerType,
+            min: s.providerMin,
+            max: s.providerMax,
+            rate,
+            offerQuantity: it.offerQuantity,
+          };
+        });
+      if (options.length === 0) return null;
+      const rates = options.map((o) => Number(o.rate));
+      const minRate = Math.min(...rates);
+      const firstName = options[0]!.name;
+      const previewLine =
+        localeKey === "ar"
+          ? options.length === 1
+            ? firstName
+            : `${firstName} و${options.length - 1} خيارًا إضافيًا`
+          : options.length === 1
+            ? firstName
+            : `${firstName} + ${options.length - 1} more options`;
+      return {
+        id: cat.id,
+        name: localeKey === "ar" ? cat.nameAr : cat.nameEn,
+        previewLine,
+        minRate: String(minRate),
+        offerPriceCents: cat.offerPriceCents,
+        serviceCount: options.length,
+        options,
+      };
+    })
+    .filter((b): b is NonNullable<typeof b> => b != null);
+
   return (
-    <main className="flex-1 bg-white px-4 py-12 md:py-16">
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-2">
-            <div className="inline-flex rounded-xl border border-[#2C4E7A]/15 bg-[#F5F7FA] px-3 py-1.5 text-xs font-medium text-[#2C4E7A]">
-              Service
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#1F3A5F] md:text-4xl">
-              SMM Growth
-            </h1>
-            <p className="max-w-2xl text-lg text-[#2C4E7A]/90">
-              This is the service landing page living under{" "}
-              <span className="font-mono font-medium text-[#1F3A5F]">
-                /trust
-              </span>
-              . Each service can evolve independently while sharing login and
-              brand.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            <Link
-              href="/dashboard"
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/services"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105"
-            >
-              All services
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {[
-            {
-              title: "Onboarding",
-              body: "Simple intake form + checklist for trust initiatives.",
-            },
-            {
-              title: "Reputation",
-              body: "Track reviews, testimonials, and messaging consistency.",
-            },
-            {
-              title: "Growth loops",
-              body: "Referral and retention loops aligned to your brand.",
-            },
-          ].map((c) => (
-            <div
-              key={c.title}
-              className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-6 shadow-sm"
-            >
-              <div className="text-base font-semibold text-[#1F3A5F]">
-                {c.title}
-              </div>
-              <div className="mt-2 text-sm leading-relaxed text-[#2C4E7A]/90">
-                {c.body}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </main>
+    <TrustClient
+      showSmmAdminLink={showSmmAdminLink}
+      isAuthenticated={Boolean(session?.user)}
+      walletBalanceCents={walletBalanceCents}
+      adBoard={adBoard}
+      manualServices={manualServicesPayload}
+      clientBundles={clientBundles}
+      topServices={topServices}
+      categories={visibleCategories.map((c) => ({
+        id: c.id,
+        name: c.providerName,
+        services: c.services.map((s) => {
+          const overridePct = markupPctByServiceId.get(s.id);
+          const rate =
+            overridePct != null
+              ? String(applyPercentMarkup(Number(s.providerRate), overridePct))
+              : String(
+                  computeClientRateUsdPer1000({
+                    providerRate: s.providerRate,
+                    serviceId: s.id,
+                    categoryId: s.categoryId,
+                    rules,
+                  }),
+                );
+          return {
+            id: s.id,
+            name: s.clientTitle?.trim() || s.providerName,
+            description: s.clientDescription?.trim() || null,
+            type: s.providerType,
+            min: s.providerMin,
+            max: s.providerMax,
+            rate,
+          };
+        }),
+      }))}
+    />
   );
 }
 

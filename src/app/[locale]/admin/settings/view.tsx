@@ -187,7 +187,7 @@ export function SiteSectionsForm({ defaults }: { defaults: Defaults }) {
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       const res = await updateMarketingContentAction(fd);
-      setStatus(res.ok ? "Saved." : "Failed to save.");
+      setStatus(res.ok ? "Saved." : ("message" in res ? res.message : "Failed to save."));
     });
   }
 
@@ -200,6 +200,86 @@ export function SiteSectionsForm({ defaults }: { defaults: Defaults }) {
           </div>
 
           <div className="mt-5 grid gap-6">
+            <div className="rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4">
+              <div className="text-sm font-semibold text-[#1F3A5F]">Home hero (advertising board)</div>
+              <p className="mt-1 text-xs text-[#2C4E7A]/80">
+                Top of the landing page. Leave a line empty to use the built-in default for that field. Optional link
+                wraps the headline block only. Media: HTTPS image, GIF, direct video file (.mp4/.webm), or YouTube/Vimeo
+                page URL.
+              </p>
+              <div className="mt-4 grid gap-4">
+                <Field
+                  name={`mc_${locale}_hero_kicker`}
+                  label="Badge / kicker"
+                  placeholder="Growth & transformation, engineered for teams"
+                  defaultValue={getPath(mc, `${locale}.hero.kicker`)}
+                />
+                <Field
+                  name={`mc_${locale}_hero_title`}
+                  label="Headline"
+                  placeholder="Forward motion for your next chapter."
+                  defaultValue={getPath(mc, `${locale}.hero.title`)}
+                />
+                <TextArea
+                  name={`mc_${locale}_hero_subtitle`}
+                  label="Subcopy"
+                  placeholder="Supporting paragraph…"
+                  defaultValue={getPath(mc, `${locale}.hero.subtitle`)}
+                  rows={3}
+                />
+                <Field
+                  name={`mc_${locale}_hero_linkUrl`}
+                  label="Optional link (https://…)"
+                  placeholder="https://example.com/campaign"
+                  defaultValue={getPath(mc, `${locale}.hero.linkUrl`)}
+                />
+                <Field
+                  name={`mc_${locale}_hero_mediaUrl`}
+                  label="Media URL (image, GIF, video file, or YouTube/Vimeo)"
+                  placeholder="https://cdn.example.com/banner.gif"
+                  defaultValue={getPath(mc, `${locale}.hero.mediaUrl`)}
+                />
+                <label className="block">
+                  <div className="text-sm font-semibold text-[#1F3A5F]">Media mode</div>
+                  <select
+                    name={`mc_${locale}_hero_media_kind`}
+                    defaultValue={getPath(mc, `${locale}.hero.mediaKind`) || "auto"}
+                    className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+                  >
+                    <option value="auto">Auto — detect image / GIF / YouTube / Vimeo / video file</option>
+                    <option value="image">Image or GIF (picture element)</option>
+                    <option value="video">Video (HTML5 or embed)</option>
+                  </select>
+                </label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field
+                    name={`mc_${locale}_hero_stat1_title`}
+                    label="Stat 1 — title"
+                    placeholder="24/7"
+                    defaultValue={getPath(mc, `${locale}.hero.stat1Title`)}
+                  />
+                  <Field
+                    name={`mc_${locale}_hero_stat1_subtitle`}
+                    label="Stat 1 — subtitle"
+                    placeholder="Always-on platform mindset"
+                    defaultValue={getPath(mc, `${locale}.hero.stat1Subtitle`)}
+                  />
+                  <Field
+                    name={`mc_${locale}_hero_stat2_title`}
+                    label="Stat 2 — title"
+                    placeholder="One login"
+                    defaultValue={getPath(mc, `${locale}.hero.stat2Title`)}
+                  />
+                  <Field
+                    name={`mc_${locale}_hero_stat2_subtitle`}
+                    label="Stat 2 — subtitle"
+                    placeholder="Shared access across services"
+                    defaultValue={getPath(mc, `${locale}.hero.stat2Subtitle`)}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
               <Field
                 name={`mc_${locale}_nav_about`}

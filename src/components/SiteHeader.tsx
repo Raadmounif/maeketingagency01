@@ -1,15 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useState, useTransition } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { getPathname, Link, usePathname, useRouter } from "@/i18n/routing";
-
-type NavOverrides = {
-  about?: string;
-  proof?: string;
-};
+import { createPaymentRequestAction } from "@/app/[locale]/payments/actions";
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
@@ -36,7 +32,15 @@ function MenuIcon({ open }: { open: boolean }) {
   );
 }
 
-export function SiteHeader({ navOverrides }: { navOverrides?: NavOverrides }) {
+export function SiteHeader(props?: {
+  walletBalanceCents: number | null;
+  paymentMethods: Array<{
+    id: string;
+    name: string;
+    descriptionText: string | null;
+    descriptionMediaUrl: string | null;
+  }>;
+}) {
   const pathname = usePathname();
   const [navHydrated, setNavHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -69,11 +73,28 @@ export function SiteHeader({ navOverrides }: { navOverrides?: NavOverrides }) {
   const role = (data?.user as unknown as { role?: string })?.role;
   const isAdmin = role === "PLATFORM_ADMIN";
   const isArabic = locale === "ar";
+  const walletBalanceCents = props?.walletBalanceCents ?? null;
+  const paymentMethods = props?.paymentMethods ?? [];
+  const [fundsOpen, setFundsOpen] = useState(false);
+  const [fundsMethodId, setFundsMethodId] = useState("");
+  const [fundsAmount, setFundsAmount] = useState("");
+  const [fundsNote, setFundsNote] = useState("");
+  const [fundsProofUrl, setFundsProofUrl] = useState("");
+  const [fundsStatus, setFundsStatus] = useState<string | null>(null);
+  const [fundsPending, startFundsTransition] = useTransition();
+
+  const welcomeName = (() => {
+    const u = data?.user;
+    if (!u) return "";
+    const name = typeof u.name === "string" ? u.name.trim() : "";
+    if (name) return name;
+    const email = typeof u.email === "string" ? u.email.trim() : "";
+    if (email) return email.split("@")[0] || email;
+    return t("nav.welcomeFallback");
+  })();
 
   const links: Array<{ href: string; label: string }> = [
     { href: "/#services", label: t("nav.services") },
-    { href: "/#about", label: navOverrides?.about?.trim() || t("nav.about") },
-    { href: "/#proof", label: navOverrides?.proof?.trim() || t("nav.proof") },
     { href: "/trust", label: t("nav.trustGrowth") },
   ];
 
@@ -148,6 +169,31 @@ export function SiteHeader({ navOverrides }: { navOverrides?: NavOverrides }) {
           <div className="hidden items-center gap-2 md:flex">
             {data?.user ? (
               <>
+                <span
+                  className="max-w-[11rem] truncate text-sm font-medium text-white/90 lg:max-w-[14rem]"
+                  title={welcomeName}
+                >
+                  {t("nav.welcome", { name: welcomeName })}
+                </span>
+                {walletBalanceCents !== null ? (
+                  <span className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white/90">
+                    ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFundsStatus(null);
+                    setFundsMethodId(paymentMethods[0]?.id ?? "");
+                    setFundsAmount("");
+                    setFundsNote("");
+                    setFundsProofUrl("");
+                    setFundsOpen(true);
+                  }}
+                  className="rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-3 py-2 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-900/20 transition hover:brightness-105"
+                >
+                  Add funds
+                </button>
                 {isAdmin ? (
                   <Link
                     href="/admin"
@@ -241,6 +287,29 @@ export function SiteHeader({ navOverrides }: { navOverrides?: NavOverrides }) {
           <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 pt-4">
             {data?.user ? (
               <>
+                <p className="px-1 text-center text-sm font-medium text-white/90">
+                  {t("nav.welcome", { name: welcomeName })}
+                </p>
+                {walletBalanceCents !== null ? (
+                  <p className="px-1 text-center text-sm font-semibold text-white/90">
+                    Balance: ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-base font-semibold text-[#1F3A5F] shadow-md active:brightness-95"
+                  onClick={() => {
+                    setFundsStatus(null);
+                    setFundsMethodId(paymentMethods[0]?.id ?? "");
+                    setFundsAmount("");
+                    setFundsNote("");
+                    setFundsProofUrl("");
+                    setFundsOpen(true);
+                    setMenuOpen(false);
+                  }}
+                >
+                  Add funds
+                </button>
                 {isAdmin ? (
                   <Link
                     href="/admin"
@@ -287,6 +356,155 @@ export function SiteHeader({ navOverrides }: { navOverrides?: NavOverrides }) {
                 </Link>
               </>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {fundsOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-funds-title"
+          onClick={() => {
+            if (!fundsPending) setFundsOpen(false);
+          }}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="add-funds-title" className="text-lg font-semibold text-[#1F3A5F]">
+              Add funds
+            </h3>
+            <p className="mt-1 text-sm text-[#2C4E7A]/90">
+              Pay using a method below, then submit a request. An admin will approve it and your wallet will be
+              credited.
+            </p>
+
+            {fundsStatus ? (
+              <div className="mt-4 rounded-lg border border-[#2C4E7A]/15 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F]">
+                {fundsStatus}
+              </div>
+            ) : null}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+                  Payment method
+                </div>
+                <select
+                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+                  value={fundsMethodId}
+                  onChange={(e) => setFundsMethodId(e.target.value)}
+                  disabled={fundsPending}
+                >
+                  {paymentMethods.length ? null : <option value="">No payment methods</option>}
+                  {paymentMethods.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+                  Amount (USD)
+                </div>
+                <input
+                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+                  inputMode="decimal"
+                  value={fundsAmount}
+                  onChange={(e) => setFundsAmount(e.target.value)}
+                  placeholder="25"
+                  disabled={fundsPending}
+                />
+              </label>
+              <label className="block">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+                  Proof URL (optional)
+                </div>
+                <input
+                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+                  value={fundsProofUrl}
+                  onChange={(e) => setFundsProofUrl(e.target.value)}
+                  placeholder="https://…"
+                  disabled={fundsPending}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+                  Note (optional)
+                </div>
+                <input
+                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+                  value={fundsNote}
+                  onChange={(e) => setFundsNote(e.target.value)}
+                  placeholder="TXID / phone number / details…"
+                  maxLength={512}
+                  disabled={fundsPending}
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F]"
+                onClick={() => setFundsOpen(false)}
+                disabled={fundsPending}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                disabled={fundsPending || !fundsMethodId || !paymentMethods.length}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-[#1F3A5F] px-5 text-sm font-semibold text-white disabled:opacity-60"
+                onClick={() => {
+                  setFundsStatus(null);
+                  startFundsTransition(async () => {
+                    const res = await createPaymentRequestAction({
+                      methodId: fundsMethodId,
+                      amountUsd: Number(fundsAmount),
+                      clientNote: fundsNote,
+                      proofUrl: fundsProofUrl,
+                    });
+                    if (!res.ok) {
+                      setFundsStatus(res.message);
+                      return;
+                    }
+                    setFundsStatus("Payment request created. Check Dashboard → My payments.");
+                    setFundsAmount("");
+                    setFundsNote("");
+                    setFundsProofUrl("");
+                  });
+                }}
+              >
+                {fundsPending ? "Submitting…" : "Submit request"}
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {paymentMethods.map((m) => (
+                <div key={m.id} className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-4">
+                  <div className="font-semibold text-[#1F3A5F]">{m.name}</div>
+                  {m.descriptionMediaUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={m.descriptionMediaUrl}
+                      alt={m.name}
+                      className="mt-3 w-full rounded-lg border border-[#2C4E7A]/10 object-cover"
+                    />
+                  ) : null}
+                  {m.descriptionText ? (
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-[#2C4E7A]/90">
+                      {m.descriptionText}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : null}

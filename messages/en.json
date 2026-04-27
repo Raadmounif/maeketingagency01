@@ -1,5 +1,7 @@
 {
   "nav": {
+    "welcome": "Welcome, {name}",
+    "welcomeFallback": "Guest",
     "services": "Services",
     "about": "About",
     "proof": "Proof",
@@ -13,6 +15,69 @@
   "lang": {
     "switchToArabic": "العربية",
     "switchToEnglish": "English"
+  },
+  "smmTrust": {
+    "hero": {
+      "kicker": "The #1 panel in the region",
+      "title": "Grow your digital presence with SMM Growth",
+      "subtitle": "Social media marketing from one dashboard — clear pricing, speed, and reliability.",
+      "login": "Log in",
+      "register": "Create account"
+    },
+    "order": {
+      "sectionTitle": "Place an order",
+      "sectionHelp": "Anyone can browse services below. To place an order, create an account, sign in, add balance from your dashboard, and ensure your wallet covers the estimated charge.",
+      "guestBrowseHint": "All catalog services, categories, and manual offers are visible without signing in. Ordering requires an account, login, and enough wallet balance.",
+      "walletBalance": "Wallet balance: ${amount} USD",
+      "estimatedCharge": "Estimated charge: ${amount} USD",
+      "insufficientBalance": "Your wallet balance is too low for this order.",
+      "dashboardLink": "Open dashboard to add funds",
+      "needLoginToOrder": "To place an order, sign in or create an account.",
+      "adminLink": "SMM admin",
+      "service": "Service",
+      "chooseService": "Choose…",
+      "link": "Link",
+      "linkPlaceholder": "https://…",
+      "quantity": "Quantity",
+      "quantityPlaceholder": "1000",
+      "placeOrder": "Place order",
+      "placing": "Placing…",
+      "orderSuccess": "Order created (reference {id}).",
+      "min": "Min",
+      "max": "Max"
+    },
+    "clientOffers": {
+      "sectionTitle": "Featured offers",
+      "sectionHelp": "Each card is one offer you defined in admin. The price and quantities are fixed; customers only paste the URL(s).",
+      "productLabel": "Offer",
+      "openOffer": "View offer",
+      "modalSubtitle": "Paste the URL(s). Quantities and total price are fixed by admin.",
+      "optionCount": "{count} services",
+      "finalPrice": "Final price: ${amount} USD",
+      "fixedQuantity": "Qty: {qty}",
+      "urlPlaceholder": "Paste URL…",
+      "placeOffer": "Place offer order",
+      "offerOrderSuccess": "Offer order created (reference {id})."
+    },
+    "manualServices": {
+      "sectionTitle": "another services",
+      "sectionHelp": "",
+      "empty": "No services listed yet.",
+      "order": "Order",
+      "loginToOrder": "Log in to order",
+      "confirmTitle": "Confirm order",
+      "noteLabel": "Note for our team (optional)",
+      "notePlaceholder": "Links, targets, deadlines…",
+      "cancel": "Cancel",
+      "submitOrder": "Submit order",
+      "placing": "Submitting…",
+      "orderSuccess": "Order placed (reference {id}). We will follow up."
+    },
+    "topServices": {
+      "title": "Most ordered services",
+      "subtitle": "Top 10 (completed orders)",
+      "orders": "{count} orders"
+    }
   }
 }
 

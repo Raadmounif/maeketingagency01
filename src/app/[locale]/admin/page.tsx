@@ -23,6 +23,24 @@ export default async function AdminPage() {
               Manage users & roles
             </Link>
             <Link
+              href="/admin/smm"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
+            >
+              SMM Growth
+            </Link>
+            <Link
+              href="/admin/manual-services"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
+            >
+              Manual services
+            </Link>
+            <Link
+              href="/admin/payments"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
+            >
+              Payments
+            </Link>
+            <Link
               href="/admin/settings"
               className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
             >

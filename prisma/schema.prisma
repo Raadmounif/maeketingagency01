@@ -25,6 +25,14 @@ model User {
 
   accounts Account[]
   sessions Session[]
+  wallet   Wallet?
+  smmOrders SmmOrder[]
+  customServiceOrders CustomServiceOrder[]
+  smmOfferOrders SmmOfferOrder[]
+  paymentRequests PaymentRequest[]
+  paymentsApproved PaymentRequest[] @relation("PaymentApprovedBy")
+  paymentsRefunded PaymentRequest[] @relation("PaymentRefundedBy")
+  reseller ResellerAccount?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,5 +90,414 @@ model SiteSettings {
   marketingContent Json?
 
   updatedAt DateTime @updatedAt
+}
+
+model SmmProviderConfig {
+  id Int @id @default(1)
+
+  /**
+   * Provider API base URL, e.g. "https://panel.example.com".
+   * The API key is stored server-side in env (not in DB).
+   */
+  baseUrl String @db.VarChar(512)
+
+  /** Minimum margin guardrail applied to reseller discounts. */
+  resellerMinMarginPct Float @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+model SmmCategory {
+  id           String @id @default(cuid())
+  providerName String @db.VarChar(255)
+  sort         Int    @default(0)
+
+  services SmmService[]
+  markupRules SmmMarkupRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerName])
+}
+
+model SmmService {
+  id String @id @default(cuid())
+
+  providerServiceId Int
+  providerName      String @db.VarChar(512)
+  providerType      String @db.VarChar(64)
+  providerRate      Decimal @db.Decimal(12, 6)
+  providerMin       Int
+  providerMax       Int
+  providerRefill    Boolean @default(false)
+  providerCancel    Boolean @default(false)
+
+  /** Optional client-facing title; when null/empty, `providerName` is shown. Not overwritten by API sync. */
+  clientTitle       String? @db.VarChar(512)
+  /** Optional client-facing description; replaces showing only API fields. Not overwritten by API sync. */
+  clientDescription String? @db.Text
+
+  categoryId String
+  category   SmmCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  /** Visibility flags - default OFF (must be enabled explicitly). */
+  enabledForClients   Boolean @default(false)
+  enabledForResellers Boolean @default(false)
+
+  isArchived Boolean @default(false)
+
+  markupRules SmmMarkupRule[]
+  orders SmmOrder[]
+  clientCategoryItem SmmClientCategoryItem?
+  offerItems SmmOfferOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerServiceId])
+  @@index([categoryId])
+}
+
+enum SmmMarkupScope {
+  GLOBAL
+  CATEGORY
+  SERVICE
+}
+
+enum SmmMarkupKind {
+  PERCENT
+  FIXED
+}
+
+model SmmMarkupRule {
+  id String @id @default(cuid())
+
+  scope SmmMarkupScope
+  kind  SmmMarkupKind
+
+  /** For PERCENT, store 0-100. For FIXED, store cents-per-1000 (integer). */
+  value Float
+
+  categoryId String?
+  serviceId  String?
+
+  category SmmCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  service  SmmService?  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scope])
+  @@index([categoryId])
+  @@index([serviceId])
+}
+
+model Wallet {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  balanceCents Int @default(0)
+
+  transactions WalletTransaction[]
+
+  updatedAt DateTime @updatedAt
+}
+
+enum WalletTxType {
+  CREDIT
+  DEBIT
+}
+
+model WalletTransaction {
+  id String @id @default(cuid())
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  type        WalletTxType
+  amountCents Int
+  note        String? @db.VarChar(512)
+
+  createdAt DateTime @default(now())
+}
+
+model PaymentMethod {
+  id String @id @default(cuid())
+
+  name String @db.VarChar(255)
+  descriptionText String? @db.Text
+  descriptionMediaUrl String? @db.VarChar(512)
+
+  enabled Boolean @default(true)
+  sort    Int     @default(0)
+
+  requests PaymentRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+model PaymentRequest {
+  id String @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  methodId String
+  method   PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
+
+  amountCents Int
+  status PaymentStatus @default(PENDING)
+
+  /** Optional note/txid/etc from client. */
+  clientNote String? @db.VarChar(512)
+  /** Optional proof screenshot URL. */
+  proofUrl String? @db.VarChar(512)
+
+  approvedAt DateTime?
+  approvedByUserId String?
+  approvedBy User? @relation("PaymentApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+
+  refundedAt DateTime?
+  refundedByUserId String?
+  refundedBy User? @relation("PaymentRefundedBy", fields: [refundedByUserId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([methodId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum OrderChannel {
+  DIRECT
+  RESELLER
+}
+
+enum SmmOrderStatus {
+  PENDING
+  PROCESSING
+  IN_PROGRESS
+  COMPLETED
+  PARTIAL
+  CANCELED
+  FAILED
+}
+
+model SmmOrder {
+  id String @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   SmmService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  channel       OrderChannel @default(DIRECT)
+  resellerUserId String?
+
+  link     String @db.VarChar(2048)
+  quantity Int
+
+  /** Charge to the end-customer (or reseller) in cents. */
+  chargeCents Int
+
+  providerOrderId Int?
+  status          SmmOrderStatus @default(PENDING)
+  remains         Int?
+  providerCharge  Decimal? @db.Decimal(12, 6)
+
+  offerItem SmmOfferOrderItem?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([serviceId])
+  @@index([providerOrderId])
+}
+
+model ResellerAccount {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(false)
+  /** Store only a hash; never store plaintext API keys. Null until a key is issued. */
+  apiKeyHash String? @db.VarChar(128)
+
+  /** Discount percent off the platform client rate (0-100). */
+  discountPct Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/** SMM Growth service page banner / advertising board (per UI locale). */
+model SmmAdvertisingBoard {
+  locale String @id @db.VarChar(8)
+
+  enabled Boolean @default(false)
+  title   String  @default("") @db.VarChar(255)
+  body    String  @default("") @db.Text
+  linkUrl String? @db.VarChar(512)
+
+  /** HTTPS URL to an image, GIF, or video (direct file or YouTube/Vimeo page). */
+  mediaUrl  String? @db.VarChar(512)
+  /** auto | image | video — GIFs use image. */
+  mediaKind String? @db.VarChar(16)
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * Client-facing curated categories for SMM Growth.
+ * Each category contains a chosen set of SmmService items, each with its own markup override.
+ */
+model SmmClientCategory {
+  id String @id @default(cuid())
+
+  nameEn String @db.VarChar(255)
+  nameAr String @db.VarChar(255)
+
+  /** Fixed end-customer price for the whole offer (in cents). */
+  offerPriceCents Int @default(0)
+
+  enabled Boolean @default(true)
+  sort    Int     @default(0)
+
+  items SmmClientCategoryItem[]
+
+  offerOrders SmmOfferOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SmmClientCategoryItem {
+  id String @id @default(cuid())
+
+  categoryId String
+  category   SmmClientCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  serviceId String @unique
+  service   SmmService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  /** Percent markup applied to provider rate (overrides global/category/service markup rules). */
+  markupPct Float @default(0)
+  /** Fixed quantity for this service when ordering the whole offer. */
+  offerQuantity Int @default(0)
+  sort      Int   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+enum SmmOfferOrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+/** A single client "offer" order (bundle of 1+ SmmService items). */
+model SmmOfferOrder {
+  id String @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   SmmClientCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  /** Charged once for the whole offer. */
+  chargeCents Int
+  status      SmmOfferOrderStatus @default(PENDING)
+
+  items SmmOfferOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model SmmOfferOrderItem {
+  id String @id @default(cuid())
+
+  offerOrderId String
+  offerOrder   SmmOfferOrder @relation(fields: [offerOrderId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   SmmService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  link     String @db.VarChar(2048)
+  quantity Int
+
+  smmOrderId String? @unique
+  smmOrder   SmmOrder? @relation(fields: [smmOrderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([offerOrderId])
+  @@index([serviceId])
+}
+
+/** Admin-defined services not synced from the SMM provider API. */
+model CustomService {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String  @db.Text
+  priceUsd    Decimal @db.Decimal(10, 2)
+  enabled     Boolean @default(true)
+  sort        Int     @default(0)
+
+  orders CustomServiceOrder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CustomServiceOrderStatus {
+  ORDERED
+  DONE
+}
+
+model CustomServiceOrder {
+  id String @id @default(cuid())
+
+  serviceId String
+  service   CustomService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status CustomServiceOrderStatus @default(ORDERED)
+  /** Optional note from the client when placing the order. */
+  clientNote String? @db.VarChar(512)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([serviceId])
+  @@index([status])
 }
 

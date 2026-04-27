@@ -1,4 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import {
+  type AdvertisingMediaKind,
+  normalizeAdvertisingMediaKind,
+  normalizeAdvertisingMediaUrl,
+} from "@/lib/advertising-media";
 
 export type SocialLinks = {
   twitterUrl?: string | null;
@@ -13,6 +18,63 @@ export type MarketingQuote = {
   name?: string;
   role?: string;
 };
+
+/** Home page hero / advertising board (per locale), edited in Admin → Site settings. */
+export type HeroBoard = {
+  kicker: string;
+  title: string;
+  subtitle: string;
+  linkUrl: string | null;
+  /** Image, GIF, or video URL (https). */
+  mediaUrl: string | null;
+  /** auto: detect YouTube/Vimeo/direct video vs image; image: always img; video: player or iframe. */
+  mediaKind: AdvertisingMediaKind | null;
+  stat1Title: string;
+  stat1Subtitle: string;
+  stat2Title: string;
+  stat2Subtitle: string;
+};
+
+const HERO_DEFAULTS: Record<"en" | "ar", HeroBoard> = {
+  en: {
+    kicker: "Growth & transformation, engineered for teams",
+    title: "Forward motion for your next chapter.",
+    subtitle:
+      "PalmyraShift helps organizations build trust, ship services faster, and scale change—without losing the clarity that keeps teams aligned.",
+    linkUrl: null,
+    mediaUrl: null,
+    mediaKind: null,
+    stat1Title: "24/7",
+    stat1Subtitle: "Always-on platform mindset",
+    stat2Title: "One login",
+    stat2Subtitle: "Shared access across services",
+  },
+  ar: {
+    kicker: "Growth & transformation, engineered for teams",
+    title: "Forward motion for your next chapter.",
+    subtitle:
+      "PalmyraShift helps organizations build trust, ship services faster, and scale change—without losing the clarity that keeps teams aligned.",
+    linkUrl: null,
+    mediaUrl: null,
+    mediaKind: null,
+    stat1Title: "24/7",
+    stat1Subtitle: "Always-on platform mindset",
+    stat2Title: "One login",
+    stat2Subtitle: "Shared access across services",
+  },
+};
+
+function normalizeHeroLink(raw: unknown): string | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
 
 export type MarketingContent = {
   nav: {
@@ -176,5 +238,43 @@ export async function getMarketingContent(locale: "en" | "ar"): Promise<Marketin
   };
 
   return merged;
+}
+
+export async function getHeroBoard(locale: "en" | "ar"): Promise<HeroBoard> {
+  const defaults = HERO_DEFAULTS[locale];
+  const s = await getSiteSettings();
+  const raw = (s?.marketingContent ?? {}) as unknown;
+  const root = (typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {}) as Record<
+    string,
+    unknown
+  >;
+  const byLocale =
+    typeof root[locale] === "object" && root[locale] !== null
+      ? (root[locale] as Record<string, unknown>)
+      : {};
+  const hero =
+    typeof byLocale.hero === "object" && byLocale.hero !== null
+      ? (byLocale.hero as Record<string, unknown>)
+      : {};
+
+  const linkRaw = asString(hero.linkUrl).trim();
+  const linkUrl = linkRaw ? normalizeHeroLink(linkRaw) : null;
+
+  const mediaUrlRaw = asString(hero.mediaUrl).trim();
+  const mediaUrl = mediaUrlRaw ? normalizeAdvertisingMediaUrl(mediaUrlRaw) : null;
+  const mediaKind = normalizeAdvertisingMediaKind(hero.mediaKind);
+
+  return {
+    kicker: asString(hero.kicker).trim() || defaults.kicker,
+    title: asString(hero.title).trim() || defaults.title,
+    subtitle: asString(hero.subtitle).trim() || defaults.subtitle,
+    linkUrl: linkUrl ?? defaults.linkUrl,
+    mediaUrl: mediaUrl ?? defaults.mediaUrl,
+    mediaKind: mediaKind ?? defaults.mediaKind,
+    stat1Title: asString(hero.stat1Title).trim() || defaults.stat1Title,
+    stat1Subtitle: asString(hero.stat1Subtitle).trim() || defaults.stat1Subtitle,
+    stat2Title: asString(hero.stat2Title).trim() || defaults.stat2Title,
+    stat2Subtitle: asString(hero.stat2Subtitle).trim() || defaults.stat2Subtitle,
+  };
 }
 

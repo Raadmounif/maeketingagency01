@@ -1,18 +1,26 @@
-import { getLocale } from "next-intl/server";
-import { getMarketingContent } from "@/lib/site-settings";
 import { SiteHeader } from "@/components/SiteHeader";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 export async function SiteHeaderServer() {
-  const locale = (await getLocale()) as "en" | "ar";
-  const mc = await getMarketingContent(locale);
+  const session = await getSession();
+  const userId = (session?.user as unknown as { id?: string })?.id ?? null;
 
-  return (
-    <SiteHeader
-      navOverrides={{
-        about: mc.nav.about,
-        proof: mc.nav.proof,
-      }}
-    />
-  );
+  const walletBalanceCents = userId
+    ? (await prisma.wallet.findUnique({ where: { userId }, select: { balanceCents: true } }))
+        ?.balanceCents ?? 0
+    : null;
+
+  const paymentMethods = await prisma.paymentMethod.findMany({
+    where: { enabled: true },
+    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      descriptionText: true,
+      descriptionMediaUrl: true,
+    },
+  });
+
+  return <SiteHeader walletBalanceCents={walletBalanceCents} paymentMethods={paymentMethods} />;
 }
-

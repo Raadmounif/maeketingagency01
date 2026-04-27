@@ -1,49 +1,59 @@
-import { Link } from "@/i18n/routing";
+import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import DashboardClient from "./view";
 
 export default async function DashboardPage() {
   const session = await getSession();
-  const role = (session?.user as unknown as { role?: string })?.role;
-  const isAdmin = role === "PLATFORM_ADMIN";
+  const userId = (session?.user as unknown as { id?: string })?.id;
+  if (!userId) {
+    return (
+      <main className="flex-1 bg-white px-4 py-12 md:py-16">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-8 shadow-sm">
+            <h1 className="text-2xl font-bold tracking-tight text-[#1F3A5F]">Dashboard</h1>
+            <p className="mt-2 text-[#2C4E7A]/90">You must be signed in.</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const wallet = await prisma.wallet.findUnique({ where: { userId } });
+  const walletBalanceCents = wallet?.balanceCents ?? 0;
+
+  const methods = await prisma.paymentMethod.findMany({
+    where: { enabled: true },
+    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+  });
+
+  const payments = await prisma.paymentRequest.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: { method: { select: { name: true } } },
+  });
 
   return (
     <main className="flex-1 bg-white px-4 py-12 md:py-16">
       <div className="mx-auto w-full max-w-6xl">
-        <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-8 shadow-sm">
-          <h1 className="text-2xl font-bold tracking-tight text-[#1F3A5F]">
-            Dashboard
-          </h1>
-          <p className="mt-2 text-[#2C4E7A]/90">
-            Signed in as{" "}
-            <span className="font-semibold text-[#1F3A5F]">
-              {session?.user?.email ?? "unknown"}
-            </span>
-            .
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link
-              href="/services"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105"
-            >
-              Explore services
-            </Link>
-            <Link
-              href="/trust"
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
-            >
-              SMM Growth
-            </Link>
-            {isAdmin ? (
-              <Link
-                href="/admin"
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
-              >
-                Admin
-              </Link>
-            ) : null}
-          </div>
-        </div>
+        <DashboardClient
+          walletBalanceCents={walletBalanceCents}
+          methods={methods.map((m) => ({
+            id: m.id,
+            name: m.name,
+            descriptionText: m.descriptionText,
+            descriptionMediaUrl: m.descriptionMediaUrl,
+          }))}
+          payments={payments.map((p) => ({
+            id: p.id,
+            createdAt: p.createdAt.toISOString(),
+            status: p.status,
+            amountCents: p.amountCents,
+            methodName: p.method.name,
+            clientNote: p.clientNote,
+            proofUrl: p.proofUrl,
+          }))}
+        />
       </div>
     </main>
   );

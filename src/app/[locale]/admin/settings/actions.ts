@@ -74,6 +74,18 @@ function normLines(v: unknown) {
     .filter(Boolean);
 }
 
+function normOptionalHttpUrl(v: unknown): string | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 function parseQuotesLines(lines: string[]) {
   // One per line: quote|name|role
   return lines
@@ -115,6 +127,27 @@ export async function updateMarketingContentAction(formData: FormData) {
     const navAbout = normText(formData.get(`mc_${locale}_nav_about`));
     const navProof = normText(formData.get(`mc_${locale}_nav_proof`));
 
+    const heroKicker = normText(formData.get(`mc_${locale}_hero_kicker`));
+    const heroTitle = normText(formData.get(`mc_${locale}_hero_title`));
+    const heroSubtitle = normText(formData.get(`mc_${locale}_hero_subtitle`));
+    const heroLinkUrl = normOptionalHttpUrl(formData.get(`mc_${locale}_hero_linkUrl`));
+
+    const heroMediaUrlRaw = String(formData.get(`mc_${locale}_hero_mediaUrl`) ?? "").trim();
+    const heroMediaUrl = normOptionalHttpUrl(formData.get(`mc_${locale}_hero_mediaUrl`));
+    if (heroMediaUrlRaw && !heroMediaUrl) {
+      return { ok: false as const, message: `Invalid media URL for ${locale.toUpperCase()} (use http or https).` };
+    }
+    const heroMediaKindRaw = normText(formData.get(`mc_${locale}_hero_media_kind`)).toLowerCase();
+    const heroMediaKind =
+      heroMediaKindRaw === "image" || heroMediaKindRaw === "video" || heroMediaKindRaw === "auto"
+        ? heroMediaKindRaw
+        : "";
+
+    const heroStat1Title = normText(formData.get(`mc_${locale}_hero_stat1_title`));
+    const heroStat1Subtitle = normText(formData.get(`mc_${locale}_hero_stat1_subtitle`));
+    const heroStat2Title = normText(formData.get(`mc_${locale}_hero_stat2_title`));
+    const heroStat2Subtitle = normText(formData.get(`mc_${locale}_hero_stat2_subtitle`));
+
     const existingLocale = existing?.[locale];
     const baseLocale = isRecord(existingLocale) ? existingLocale : {};
     const existingNav = isRecord(baseLocale.nav) ? baseLocale.nav : {};
@@ -125,6 +158,18 @@ export async function updateMarketingContentAction(formData: FormData) {
         ...existingNav,
         about: navAbout,
         proof: navProof,
+      },
+      hero: {
+        kicker: heroKicker,
+        title: heroTitle,
+        subtitle: heroSubtitle,
+        linkUrl: heroLinkUrl,
+        mediaUrl: heroMediaUrl,
+        mediaKind: heroMediaKind,
+        stat1Title: heroStat1Title,
+        stat1Subtitle: heroStat1Subtitle,
+        stat2Title: heroStat2Title,
+        stat2Subtitle: heroStat2Subtitle,
       },
       about: { kicker: aboutKicker, title: aboutTitle, body: aboutBody, bullets: aboutBullets },
       proof: { title: proofTitle, subtitle: proofSubtitle, quotes: proofQuotes },
