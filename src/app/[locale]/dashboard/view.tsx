@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { createPaymentRequestAction } from "./actions";
 
 type Method = {
@@ -66,40 +66,6 @@ function pillClassForStatus(status: string) {
   return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
-function DashboardAccordion({ id, title, children }: { id: string; title: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const panelId = `${id}-panel`;
-  const triggerId = `${id}-trigger`;
-
-  return (
-    <section className="mt-8 overflow-hidden rounded-xl border border-[#2C4E7A]/12 bg-white">
-      <button
-        type="button"
-        id={triggerId}
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-[#F5F7FA]/80"
-      >
-        <h2 className="text-lg font-semibold text-[#1F3A5F]">{title}</h2>
-        <span className="shrink-0 text-sm font-semibold text-[#2C4E7A]/80" aria-hidden>
-          {open ? "−" : "+"}
-        </span>
-      </button>
-      {open ? (
-        <div
-          id={panelId}
-          role="region"
-          aria-labelledby={triggerId}
-          className="border-t border-[#2C4E7A]/12 px-5 pb-5 pt-1"
-        >
-          {children}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
 export default function DashboardClient(props: {
   walletBalanceCents: number;
   methods: Method[];
@@ -144,7 +110,7 @@ export default function DashboardClient(props: {
         </div>
       ) : null}
 
-      <DashboardAccordion id="dash-add-funds" title="Add funds">
+      <CollapsibleSection id="dash-add-funds" title="Add funds" className="mt-8">
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
           Create a payment request. Status will be <strong>Pending</strong> until an admin approves.
         </p>
@@ -236,9 +202,9 @@ export default function DashboardClient(props: {
             </button>
           </div>
         </form>
-      </DashboardAccordion>
+      </CollapsibleSection>
 
-      <DashboardAccordion id="dash-payments" title="My payments">
+      <CollapsibleSection id="dash-payments" title="My payments" className="mt-8">
         <div className="mt-3 overflow-x-auto rounded-lg border border-[#2C4E7A]/12">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
@@ -290,9 +256,9 @@ export default function DashboardClient(props: {
             </tbody>
           </table>
         </div>
-      </DashboardAccordion>
+      </CollapsibleSection>
 
-      <DashboardAccordion id="dash-orders" title="Ordered services">
+      <CollapsibleSection id="dash-orders" title="Ordered services" className="mt-8">
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
           API service status updates automatically from the provider. Manual service status is updated by an admin.
         </p>
@@ -366,7 +332,7 @@ export default function DashboardClient(props: {
             </tbody>
           </table>
         </div>
-      </DashboardAccordion>
+      </CollapsibleSection>
     </div>
   );
 }

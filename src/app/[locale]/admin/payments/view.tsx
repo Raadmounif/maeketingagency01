@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import {
   approvePaymentRequestAction,
   createPaymentMethodAction,
@@ -69,10 +70,9 @@ export default function PaymentsAdminClient(props: {
         </div>
       ) : null}
 
-      <section>
-        <h2 className="text-lg font-semibold text-[#1F3A5F]">Payment methods</h2>
-        <p className="mt-1 text-sm text-[#2C4E7A]/85">
-          These methods appear in the header “Add funds” modal and on the dashboard.
+      <CollapsibleSection id="admin-payments-methods" title="Payment methods">
+        <p className="mt-2 text-sm text-[#2C4E7A]/85">
+          These methods appear when clients add funds from the dashboard.
         </p>
 
         <form
@@ -194,16 +194,13 @@ export default function PaymentsAdminClient(props: {
             </tbody>
           </table>
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-[#1F3A5F]">Payment requests</h2>
-            <p className="mt-1 text-sm text-[#2C4E7A]/85">
-              Approving credits the user wallet. Platform admin can refund (debit) approved payments.
-            </p>
-          </div>
+      <CollapsibleSection id="admin-payments-requests" title="Payment requests">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-sm text-[#2C4E7A]/85">
+            Approving credits the user wallet. Platform admin can refund (debit) approved payments.
+          </p>
           <label className="text-sm text-[#1F3A5F]">
             <span className="mr-2 font-medium">Show</span>
             <select
@@ -326,7 +323,7 @@ export default function PaymentsAdminClient(props: {
             </tbody>
           </table>
         </div>
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }

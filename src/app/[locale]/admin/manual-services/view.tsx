@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import {
   createCustomServiceAction,
   deleteCustomServiceAction,
@@ -61,9 +62,8 @@ export default function ManualServicesAdminClient(props: {
         </div>
       ) : null}
 
-      <section>
-        <h2 className="text-lg font-semibold text-[#1F3A5F]">Add a service</h2>
-        <p className="mt-1 text-sm text-[#2C4E7A]/85">
+      <CollapsibleSection id="admin-manual-add" title="Add a service">
+        <p className="mt-2 text-sm text-[#2C4E7A]/85">
           Name, description, and price (USD). These are separate from the SMM API catalog.
         </p>
         <form
@@ -134,11 +134,10 @@ export default function ManualServicesAdminClient(props: {
             </button>
           </div>
         </form>
-      </section>
+      </CollapsibleSection>
 
-      <section>
-        <h2 className="text-lg font-semibold text-[#1F3A5F]">Services</h2>
-        <div className="mt-4 overflow-x-auto rounded-lg border border-[#2C4E7A]/12 bg-white">
+      <CollapsibleSection id="admin-manual-services" title="Services">
+        <div className="mt-3 overflow-x-auto rounded-lg border border-[#2C4E7A]/12 bg-white">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
@@ -171,17 +170,14 @@ export default function ManualServicesAdminClient(props: {
             </tbody>
           </table>
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-[#1F3A5F]">Orders board</h2>
-            <p className="mt-1 text-sm text-[#2C4E7A]/85">
-              New requests start as <strong>Ordered</strong>. Mark <strong>Done</strong> when you
-              finish the work.
-            </p>
-          </div>
+      <CollapsibleSection id="admin-manual-orders" title="Orders board">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-sm text-[#2C4E7A]/85">
+            New requests start as <strong>Ordered</strong>. Mark <strong>Done</strong> when you finish
+            the work.
+          </p>
           <label className="text-sm text-[#1F3A5F]">
             <span className="mr-2 font-medium">Show</span>
             <select
@@ -256,7 +252,7 @@ export default function ManualServicesAdminClient(props: {
             </tbody>
           </table>
         </div>
-      </section>
+      </CollapsibleSection>
     </div>
   );
 }

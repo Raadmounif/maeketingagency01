@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import {
   creditUserWalletAction,
   createSmmClientCategoryAction,
@@ -217,7 +218,7 @@ function ClientCategoriesManager({
   }
 
   return (
-    <div className="rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm">
+    <div>
       <div className="text-sm font-semibold text-[#1F3A5F]">Client categories</div>
       <p className="mt-2 text-xs text-[#2C4E7A]/80">
         Optional client categories on <span className="font-semibold">/trust</span>: each enabled category appears as
@@ -516,7 +517,7 @@ function SmmAdvertisingBoardsForm({
   }
 
   return (
-    <div className="rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm">
+    <div>
       <div className="text-sm font-semibold text-[#1F3A5F]">SMM Growth page — advertising board</div>
       <p className="mt-2 text-xs text-[#2C4E7A]/80">
         Shown on the public <span className="font-semibold">/trust</span> page for the matching site language when
@@ -885,24 +886,28 @@ export default function SmmAdminClient({
 
   return (
     <div className="space-y-8">
-      <SmmAdvertisingBoardsForm
-        key={adBoardVersionKey}
-        boards={advertisingBoards}
-        onMessage={setStatus}
-        refresh={refresh}
-      />
+      <CollapsibleSection id="admin-smm-ads" title="SMM Growth — advertising board">
+        <SmmAdvertisingBoardsForm
+          key={adBoardVersionKey}
+          boards={advertisingBoards}
+          onMessage={setStatus}
+          refresh={refresh}
+        />
+      </CollapsibleSection>
 
-      <ClientCategoriesManager
-        key={clientCategoriesVersionKey}
-        allServices={allServicesFlat}
-        categories={clientCategories}
-        pending={pending}
-        onMessage={setStatus}
-        refresh={refresh}
-      />
+      <CollapsibleSection id="admin-smm-offers" title="Featured offers & client categories">
+        <ClientCategoriesManager
+          key={clientCategoriesVersionKey}
+          allServices={allServicesFlat}
+          categories={clientCategories}
+          pending={pending}
+          onMessage={setStatus}
+          refresh={refresh}
+        />
+      </CollapsibleSection>
 
       {isPlatformAdmin ? (
-        <div className="rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm">
+        <CollapsibleSection id="admin-smm-reseller" title="Reseller API & wallet credit">
           <div className="text-sm font-semibold text-[#1F3A5F]">Reseller API</div>
           <p className="mt-2 text-xs text-[#2C4E7A]/80">
             Endpoint: <span className="font-mono">POST /api/reseller/v2</span> (same-origin). Body can be JSON or
@@ -981,9 +986,10 @@ export default function SmmAdminClient({
               </div>
             </div>
           </div>
-        </div>
+        </CollapsibleSection>
       ) : null}
 
+      <CollapsibleSection id="admin-smm-provider" title="Provider & pricing">
       <div className="grid gap-4 md:grid-cols-3">
         <label className="block">
           <div className="text-sm font-semibold text-[#1F3A5F]">Provider base URL</div>
@@ -1041,7 +1047,9 @@ export default function SmmAdminClient({
         </div>
       </div>
 
-      <div className="rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm">
+      </CollapsibleSection>
+
+      <CollapsibleSection id="admin-smm-catalog" title="Catalog & service visibility">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-sm font-semibold text-[#1F3A5F]">Service visibility</div>
@@ -1196,7 +1204,7 @@ export default function SmmAdminClient({
             ))
           )}
         </div>
-      </div>
+      </CollapsibleSection>
     </div>
   );
 }

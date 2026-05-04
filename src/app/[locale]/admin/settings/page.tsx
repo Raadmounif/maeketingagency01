@@ -1,4 +1,5 @@
 import { Link } from "@/i18n/routing";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { SiteSectionsForm, SocialLinksForm } from "./view";
@@ -41,43 +42,40 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-6 shadow-sm">
-          <SocialLinksForm
-            defaults={{
-              twitterUrl: settings?.twitterUrl ?? "",
-              linkedinUrl: settings?.linkedinUrl ?? "",
-              facebookUrl: settings?.facebookUrl ?? "",
-              instagramUrl: settings?.instagramUrl ?? "",
-              youtubeUrl: settings?.youtubeUrl ?? "",
-              marketingContent: settings?.marketingContent ?? null,
-            }}
-          />
+        <div className="mt-8">
+          <CollapsibleSection id="admin-settings-social" title="Footer social links">
+            <SocialLinksForm
+              defaults={{
+                twitterUrl: settings?.twitterUrl ?? "",
+                linkedinUrl: settings?.linkedinUrl ?? "",
+                facebookUrl: settings?.facebookUrl ?? "",
+                instagramUrl: settings?.instagramUrl ?? "",
+                youtubeUrl: settings?.youtubeUrl ?? "",
+                marketingContent: settings?.marketingContent ?? null,
+              }}
+            />
+          </CollapsibleSection>
         </div>
 
-        <div className="mt-8 rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-6 shadow-sm">
-          <div className="mb-5">
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#2C4E7A]/70">
-              Marketing
-            </div>
-            <h2 className="mt-2 text-xl font-bold tracking-tight text-[#1F3A5F]">
-              Landing page sections
-            </h2>
+        <div className="mt-8">
+          <CollapsibleSection id="admin-settings-marketing" title="Landing page sections">
             <p className="mt-2 max-w-2xl text-sm text-[#2C4E7A]/85">
               Edit the home page advertising board (hero), section names, and content for About, Proof, and Contact.
               Saved content is per-language (English/Arabic).
             </p>
-          </div>
-
-          <SiteSectionsForm
-            defaults={{
-              twitterUrl: settings?.twitterUrl ?? "",
-              linkedinUrl: settings?.linkedinUrl ?? "",
-              facebookUrl: settings?.facebookUrl ?? "",
-              instagramUrl: settings?.instagramUrl ?? "",
-              youtubeUrl: settings?.youtubeUrl ?? "",
-              marketingContent: settings?.marketingContent ?? null,
-            }}
-          />
+            <div className="mt-4">
+              <SiteSectionsForm
+                defaults={{
+                  twitterUrl: settings?.twitterUrl ?? "",
+                  linkedinUrl: settings?.linkedinUrl ?? "",
+                  facebookUrl: settings?.facebookUrl ?? "",
+                  instagramUrl: settings?.instagramUrl ?? "",
+                  youtubeUrl: settings?.youtubeUrl ?? "",
+                  marketingContent: settings?.marketingContent ?? null,
+                }}
+              />
+            </div>
+          </CollapsibleSection>
         </div>
       </div>
     </main>
