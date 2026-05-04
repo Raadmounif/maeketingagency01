@@ -161,7 +161,7 @@ export function SiteHeader(props?: {
                   {t("nav.welcome", { name: welcomeName })}
                 </span>
                 {walletBalanceCents !== null ? (
-                  <span className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white/90">
+                  <span className="text-sm font-semibold text-white/90 tabular-nums">
                     ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
                   </span>
                 ) : null}
@@ -175,7 +175,7 @@ export function SiteHeader(props?: {
                 ) : null}
                 <Link
                   href="/dashboard"
-                  className="rounded-xl px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                  className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
                 >
                   {t("nav.dashboard")}
                 </Link>
@@ -277,7 +277,7 @@ export function SiteHeader(props?: {
                 ) : null}
                 <Link
                   href="/dashboard"
-                  className="flex min-h-12 items-center justify-center rounded-xl border border-white/15 px-4 text-base font-medium text-white/90 active:bg-white/10"
+                  className="flex min-h-12 items-center justify-center rounded-xl bg-white/10 px-4 text-base font-semibold text-white active:bg-white/20"
                   onClick={() => setMenuOpen(false)}
                 >
                   {t("nav.dashboard")}
