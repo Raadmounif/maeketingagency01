@@ -26,8 +26,8 @@
     },
     "order": {
       "sectionTitle": "Place an order",
-      "sectionHelp": "Anyone can browse services below. To place an order, create an account, sign in, add balance from your dashboard, and ensure your wallet covers the estimated charge.",
-      "guestBrowseHint": "All catalog services, categories, and manual offers are visible without signing in. Ordering requires an account, login, and enough wallet balance.",
+      "sectionHelp": "Anyone can choose a service in the form. To place an order, create an account, sign in, add balance from your dashboard, and ensure your wallet covers the estimated charge.",
+      "guestBrowseHint": "Catalog services (picker and shortcuts), featured offers, and manual services are visible without signing in. Ordering requires an account, login, and enough wallet balance.",
       "walletBalance": "Wallet balance: ${amount} USD",
       "estimatedCharge": "Estimated charge: ${amount} USD",
       "insufficientBalance": "Your wallet balance is too low for this order.",

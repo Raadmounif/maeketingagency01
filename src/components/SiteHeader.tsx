@@ -161,7 +161,7 @@ export function SiteHeader(props?: {
                   {t("nav.welcome", { name: welcomeName })}
                 </span>
                 {walletBalanceCents !== null ? (
-                  <span className="text-sm font-semibold text-white/90 tabular-nums">
+                  <span className="rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-3 py-2 text-sm font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25">
                     ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
                   </span>
                 ) : null}
@@ -262,9 +262,11 @@ export function SiteHeader(props?: {
                   {t("nav.welcome", { name: welcomeName })}
                 </p>
                 {walletBalanceCents !== null ? (
-                  <p className="px-1 text-center text-sm font-semibold text-white/90">
-                    Balance: ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
-                  </p>
+                  <div className="flex justify-center px-1">
+                    <span className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-base font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25">
+                      Balance: ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
+                    </span>
+                  </div>
                 ) : null}
                 {isAdmin ? (
                   <Link

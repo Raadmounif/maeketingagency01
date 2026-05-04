@@ -567,41 +567,6 @@ export default function TrustClient({
             )}
           </div>
         </section>
-
-        <div className="mt-10 space-y-6">
-          {categories.map((cat) => (
-            <div key={cat.id} className="rounded-xl border border-[#2C4E7A]/12 bg-white shadow-sm">
-              <div className="border-b border-[#2C4E7A]/10 bg-[#F5F7FA] px-5 py-4">
-                <div className="text-sm font-semibold text-[#1F3A5F]">{cat.name}</div>
-              </div>
-              <div className="max-h-[min(60vh,48rem)] divide-y divide-[#2C4E7A]/10 overflow-y-auto overscroll-contain">
-                {cat.services.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-[#1F3A5F]">
-                        {s.name}
-                      </div>
-                      {s.description ? (
-                        <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#2C4E7A]/90">
-                          {s.description}
-                        </p>
-                      ) : null}
-                      <div className="mt-1 text-xs text-[#2C4E7A]/75">
-                        {t("order.min")} {s.min} · {t("order.max")} {s.max} · {s.type}
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-[#2C4E7A]/15 bg-[#F5F7FA] px-3 py-2 text-xs font-semibold text-[#1F3A5F]">
-                      ${s.rate}/1000
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
       </section>
 
       {bundleModal ? (
