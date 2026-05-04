@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { refreshSmmOrderStatusFromProvider } from "@/lib/smm/place-order";
 import DashboardClient from "./view";
 
 export default async function DashboardPage() {
@@ -33,6 +34,42 @@ export default async function DashboardPage() {
     include: { method: { select: { name: true } } },
   });
 
+  // Best-effort sync for recent API orders so statuses reflect provider updates.
+  const apiOrdersToRefresh = await prisma.smmOrder.findMany({
+    where: {
+      userId,
+      providerOrderId: { not: null },
+      status: { in: ["PENDING", "PROCESSING", "IN_PROGRESS"] },
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 25,
+    select: { id: true },
+  });
+
+  for (const o of apiOrdersToRefresh) {
+    // We intentionally refresh sequentially to avoid spamming the provider API.
+    // Any failures are ignored; the dashboard still renders with stored statuses.
+    await refreshSmmOrderStatusFromProvider(o.id);
+  }
+
+  const smmOrders = await prisma.smmOrder.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: {
+      service: { select: { providerName: true, clientTitle: true } },
+    },
+  });
+
+  const manualOrders = await prisma.customServiceOrder.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: {
+      service: { select: { name: true, priceUsd: true } },
+    },
+  });
+
   return (
     <main className="flex-1 bg-white px-4 py-12 md:py-16">
       <div className="mx-auto w-full max-w-6xl">
@@ -53,6 +90,26 @@ export default async function DashboardPage() {
             clientNote: p.clientNote,
             proofUrl: p.proofUrl,
           }))}
+          orderedServices={{
+            api: smmOrders.map((o) => ({
+              id: o.id,
+              createdAt: o.createdAt.toISOString(),
+              serviceName: o.service.clientTitle?.trim() || o.service.providerName,
+              link: o.link,
+              quantity: o.quantity,
+              chargeCents: o.chargeCents,
+              status: o.status,
+              providerOrderId: o.providerOrderId,
+            })),
+            manual: manualOrders.map((o) => ({
+              id: o.id,
+              createdAt: o.createdAt.toISOString(),
+              serviceName: o.service.name,
+              priceUsd: o.service.priceUsd.toString(),
+              status: o.status,
+              clientNote: o.clientNote,
+            })),
+          }}
         />
       </div>
     </main>
