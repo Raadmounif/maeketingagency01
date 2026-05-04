@@ -273,14 +273,14 @@ function ServiceEditRow(props: {
     <tr className="border-b border-[#2C4E7A]/8 align-top">
       <td className="px-3 py-2">
         <input
-          className="w-full min-w-[140px] rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-full min-w-[140px] rounded border border-[#2C4E7A]/15 bg-white px-2 py-1 text-sm text-[#1F3A5F] placeholder:text-[#2C4E7A]/45"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
       </td>
       <td className="px-3 py-2">
         <textarea
-          className="w-full min-w-[200px] rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-full min-w-[200px] rounded border border-[#2C4E7A]/15 bg-white px-2 py-1 text-sm text-[#1F3A5F] placeholder:text-[#2C4E7A]/45"
           rows={2}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -291,7 +291,7 @@ function ServiceEditRow(props: {
           type="number"
           step="0.01"
           min="0"
-          className="w-24 rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-24 rounded border border-[#2C4E7A]/15 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
           value={priceUsd}
           onChange={(e) => setPriceUsd(e.target.value)}
         />
@@ -299,7 +299,7 @@ function ServiceEditRow(props: {
       <td className="px-3 py-2">
         <input
           type="number"
-          className="w-16 rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-16 rounded border border-[#2C4E7A]/15 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
         />

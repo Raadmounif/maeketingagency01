@@ -217,26 +217,28 @@ export default function DashboardClient(props: {
                 <th className="px-3 py-2">Proof</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-[#1F3A5F]">
               {sortedPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[#2C4E7A]/75">
+                  <td colSpan={6} className="px-3 py-6 text-center text-[#2C4E7A]">
                     No payments yet.
                   </td>
                 </tr>
               ) : (
                 sortedPayments.map((p) => (
                   <tr key={p.id} className="border-b border-[#2C4E7A]/8">
-                    <td className="whitespace-nowrap px-3 py-2 text-[#2C4E7A]/90">
+                    <td className="whitespace-nowrap px-3 py-2 text-[#2C4E7A]">
                       {new Date(p.createdAt).toLocaleString()}
                     </td>
-                    <td className="px-3 py-2">{p.methodName}</td>
-                    <td className="whitespace-nowrap px-3 py-2">${formatUsd(p.amountCents)}</td>
-                    <td className="px-3 py-2 font-semibold">{p.status}</td>
-                    <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]/90">
+                    <td className="px-3 py-2 font-medium text-[#1F3A5F]">{p.methodName}</td>
+                    <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">
+                      ${formatUsd(p.amountCents)}
+                    </td>
+                    <td className="px-3 py-2 font-semibold text-[#1F3A5F]">{p.status}</td>
+                    <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]">
                       {p.clientNote ?? "—"}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 text-[#2C4E7A]">
                       {p.proofUrl ? (
                         <a
                           href={p.proofUrl}
