@@ -18,10 +18,17 @@ function prismaClientMatchesSchema(client: PrismaClient): boolean {
   const hasSmmClientCopy =
     smmFields?.clientTitle === "clientTitle" && smmFields?.clientDescription === "clientDescription";
 
+  const siteFields = Prisma.SiteSettingsScalarFieldEnum as Record<string, string>;
+  const hasCurrentSiteSettings =
+    siteFields?.contactUsUrl === "contactUsUrl" &&
+    siteFields?.smmGrowthOrderNotesEn === "smmGrowthOrderNotesEn" &&
+    siteFields?.smmGrowthOrderNotesAr === "smmGrowthOrderNotesAr";
+
   return (
     typeof c.smmClientCategory?.findMany === "function" &&
     typeof c.customService?.findMany === "function" &&
-    hasSmmClientCopy
+    hasSmmClientCopy &&
+    hasCurrentSiteSettings
   );
 }
 
