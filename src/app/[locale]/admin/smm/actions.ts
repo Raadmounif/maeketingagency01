@@ -352,3 +352,54 @@ export async function updateSmmAdvertisingBoardAction(input: {
 
   return { ok: true as const };
 }
+
+/**
+ * Per-service PERCENT markup on top of provider rate (clients + reseller pricing).
+ * Empty `percentText` removes the override so the default/global markup applies.
+ */
+export async function upsertSmmServiceMarkupPercentAction(input: {
+  serviceId: string;
+  categoryId: string;
+  percentText: string;
+}) {
+  await requireSmmAdmin();
+
+  const serviceId = String(input.serviceId ?? "").trim();
+  const categoryId = String(input.categoryId ?? "").trim();
+  if (!serviceId || !categoryId) {
+    return { ok: false as const, message: "Missing service or category." };
+  }
+
+  const raw = String(input.percentText ?? "").trim();
+
+  await prisma.smmMarkupRule.deleteMany({
+    where: { scope: "SERVICE", serviceId },
+  });
+
+  if (!raw.length) {
+    revalidatePath("/admin/smm");
+    revalidatePath("/trust");
+    return { ok: true as const };
+  }
+
+  const pct = Number(raw);
+  if (!Number.isFinite(pct) || pct < 0) {
+    return { ok: false as const, message: "Markup must be a non-negative number." };
+  }
+
+  const clamped = Math.min(1000, pct);
+
+  await prisma.smmMarkupRule.create({
+    data: {
+      scope: "SERVICE",
+      kind: "PERCENT",
+      value: clamped,
+      categoryId,
+      serviceId,
+    },
+  });
+
+  revalidatePath("/admin/smm");
+  revalidatePath("/trust");
+  return { ok: true as const };
+}

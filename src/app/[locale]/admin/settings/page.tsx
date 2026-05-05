@@ -51,6 +51,7 @@ export default async function AdminSettingsPage() {
                 facebookUrl: settings?.facebookUrl ?? "",
                 instagramUrl: settings?.instagramUrl ?? "",
                 youtubeUrl: settings?.youtubeUrl ?? "",
+                contactUsUrl: settings?.contactUsUrl ?? "",
                 marketingContent: settings?.marketingContent ?? null,
               }}
             />
@@ -71,6 +72,7 @@ export default async function AdminSettingsPage() {
                   facebookUrl: settings?.facebookUrl ?? "",
                   instagramUrl: settings?.instagramUrl ?? "",
                   youtubeUrl: settings?.youtubeUrl ?? "",
+                  contactUsUrl: settings?.contactUsUrl ?? "",
                   marketingContent: settings?.marketingContent ?? null,
                 }}
               />

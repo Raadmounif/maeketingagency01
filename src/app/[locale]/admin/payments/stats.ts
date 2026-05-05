@@ -6,7 +6,11 @@ export async function getPaymentsStats() {
     prisma.paymentRequest.count({ where: { status: "APPROVED" } }),
   ]);
 
-  const successfulOrders = await prisma.smmOrder.count({ where: { status: "COMPLETED" } });
+  const [apiCompleted, manualDone] = await Promise.all([
+    prisma.smmOrder.count({ where: { status: "COMPLETED" } }),
+    prisma.customServiceOrder.count({ where: { status: "DONE" } }),
+  ]);
+  const successfulOrders = apiCompleted + manualDone;
 
   const totalUsers = await prisma.user.count();
 

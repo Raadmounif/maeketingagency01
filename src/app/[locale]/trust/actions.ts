@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { computeClientRateUsdPer1000, type MarkupRuleRow } from "@/lib/smm/pricing";
 import { placeSmmProviderOrder } from "@/lib/smm/place-order";
@@ -12,6 +13,38 @@ import { computeChargeCents, dollarsToCents, debitWallet, getOrCreateWallet } fr
 function applyPercentMarkup(base: number, pct: number) {
   const p = Number(pct) || 0;
   return base * (1 + p / 100);
+}
+
+const MAX_ORDER_SECTION_NOTES = 16000;
+
+export async function updateSmmGrowthOrderSectionNotesAction(input: {
+  notesEn: string;
+  notesAr: string;
+}) {
+  await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
+
+  const notesEn = String(input.notesEn ?? "").trim().slice(0, MAX_ORDER_SECTION_NOTES);
+  const notesAr = String(input.notesAr ?? "").trim().slice(0, MAX_ORDER_SECTION_NOTES);
+
+  try {
+    await prisma.siteSettings.upsert({
+      where: { id: 1 },
+      create: {
+        id: 1,
+        smmGrowthOrderNotesEn: notesEn.length ? notesEn : null,
+        smmGrowthOrderNotesAr: notesAr.length ? notesAr : null,
+      },
+      update: {
+        smmGrowthOrderNotesEn: notesEn.length ? notesEn : null,
+        smmGrowthOrderNotesAr: notesAr.length ? notesAr : null,
+      },
+    });
+  } catch {
+    return { ok: false as const };
+  }
+
+  revalidatePath("/trust");
+  return { ok: true as const };
 }
 
 export async function placeSmmGrowthOrderAction(input: {

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
@@ -10,11 +11,24 @@ type Input = {
   facebookUrl?: string;
   instagramUrl?: string;
   youtubeUrl?: string;
+  contactUsUrl?: string;
 };
 
 function normUrl(v: unknown) {
   const s = String(v ?? "").trim();
   return s.length ? s : null;
+}
+
+function normHttpUrl(v: unknown) {
+  const s = String(v ?? "").trim();
+  if (!s.length) return null;
+  try {
+    const u = new URL(s);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
 }
 
 export async function updateSocialLinksAction(formData: FormData) {
@@ -26,7 +40,13 @@ export async function updateSocialLinksAction(formData: FormData) {
     facebookUrl: String(formData.get("facebookUrl") ?? ""),
     instagramUrl: String(formData.get("instagramUrl") ?? ""),
     youtubeUrl: String(formData.get("youtubeUrl") ?? ""),
+    contactUsUrl: String(formData.get("contactUsUrl") ?? ""),
   };
+
+  const contactUsUrl = normHttpUrl(input.contactUsUrl);
+  if (String(input.contactUsUrl ?? "").trim() && !contactUsUrl) {
+    return { ok: false as const, message: "Contact us link must be a valid http(s) URL, or left empty." };
+  }
 
   await prisma.siteSettings.upsert({
     where: { id: 1 },
@@ -37,6 +57,7 @@ export async function updateSocialLinksAction(formData: FormData) {
       facebookUrl: normUrl(input.facebookUrl),
       instagramUrl: normUrl(input.instagramUrl),
       youtubeUrl: normUrl(input.youtubeUrl),
+      contactUsUrl,
     },
     update: {
       twitterUrl: normUrl(input.twitterUrl),
@@ -44,9 +65,11 @@ export async function updateSocialLinksAction(formData: FormData) {
       facebookUrl: normUrl(input.facebookUrl),
       instagramUrl: normUrl(input.instagramUrl),
       youtubeUrl: normUrl(input.youtubeUrl),
+      contactUsUrl,
     },
   });
 
+  revalidatePath("/");
   return { ok: true as const };
 }
 
@@ -124,9 +147,6 @@ export async function updateMarketingContentAction(formData: FormData) {
     const contactEmail = normText(formData.get(`mc_${locale}_contact_email`));
     const contactWebsite = normText(formData.get(`mc_${locale}_contact_website`));
 
-    const navAbout = normText(formData.get(`mc_${locale}_nav_about`));
-    const navProof = normText(formData.get(`mc_${locale}_nav_proof`));
-
     const heroKicker = normText(formData.get(`mc_${locale}_hero_kicker`));
     const heroTitle = normText(formData.get(`mc_${locale}_hero_title`));
     const heroSubtitle = normText(formData.get(`mc_${locale}_hero_subtitle`));
@@ -154,11 +174,7 @@ export async function updateMarketingContentAction(formData: FormData) {
 
     next[locale] = {
       ...baseLocale,
-      nav: {
-        ...existingNav,
-        about: navAbout,
-        proof: navProof,
-      },
+      nav: { ...existingNav },
       hero: {
         kicker: heroKicker,
         title: heroTitle,

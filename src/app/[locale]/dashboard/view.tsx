@@ -112,7 +112,9 @@ export default function DashboardClient(props: {
 
       <CollapsibleSection id="dash-add-funds" title="Add funds" className="mt-8">
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
-          Create a payment request. Status will be <strong>Pending</strong> until an admin approves.
+          Create a payment request. Status will be <strong>Pending</strong> until an admin approves. You must include
+          proof of payment: a screenshot URL and/or a short written description of your transfer (at least 3
+          characters).
         </p>
 
         <form
@@ -127,7 +129,7 @@ export default function DashboardClient(props: {
                 clientNote,
                 proofUrl,
               });
-              setStatus(res.ok ? "Payment request created." : res.message);
+              setStatus(res.ok ? "Payment request created." : ("message" in res ? res.message : "Request failed."));
               if (res.ok) {
                 setAmountUsd("");
                 setClientNote("");
@@ -168,29 +170,34 @@ export default function DashboardClient(props: {
           </label>
           <label className="block md:col-span-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Note (optional)
+              Payment proof — description (required unless you add a screenshot URL below)
             </div>
-            <input
-              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
+            <textarea
+              className="mt-2 min-h-[5.5rem] w-full resize-y rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 py-2 text-sm text-[#1F3A5F]"
               value={clientNote}
               onChange={(e) => setClientNote(e.target.value)}
               disabled={pending}
-              placeholder="TXID / phone number / details…"
+              placeholder="e.g. sender name, reference / TXID, time sent, amount, wallet or bank used…"
               maxLength={512}
+              rows={4}
             />
+            <div className="mt-1 text-[11px] text-[#2C4E7A]/70">Minimum 3 characters when used as your only proof.</div>
           </label>
           <label className="block md:col-span-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Proof URL (optional)
+              Payment proof — screenshot or receipt URL (https://…)
             </div>
             <input
               className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
               value={proofUrl}
               onChange={(e) => setProofUrl(e.target.value)}
               disabled={pending}
-              placeholder="https://…"
+              placeholder="https://… (Imgur, Drive, etc.)"
               maxLength={512}
             />
+            <div className="mt-1 text-[11px] text-[#2C4E7A]/70">
+              Optional if your description above is enough; otherwise paste a link to a photo of your receipt.
+            </div>
           </label>
           <div className="md:col-span-2 flex justify-end">
             <button

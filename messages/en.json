@@ -10,7 +10,8 @@
     "admin": "Admin",
     "login": "Login",
     "getStarted": "Get started",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "contactUs": "Contact us"
   },
   "lang": {
     "switchToArabic": "العربية",
@@ -18,7 +19,6 @@
   },
   "smmTrust": {
     "hero": {
-      "kicker": "The #1 panel in the region",
       "title": "Grow your digital presence with SMM Growth",
       "subtitle": "Social media marketing from one dashboard — clear pricing, speed, and reliability.",
       "login": "Log in",
@@ -44,7 +44,17 @@
       "placing": "Placing…",
       "orderSuccess": "Order created (reference {id}).",
       "min": "Min",
-      "max": "Max"
+      "max": "Max",
+      "staffNotesTitle": "Staff notes (under this form)",
+      "staffNotesHelp": "Visible to everyone on this page. Use for instructions, SLAs, or cautions. Platform admins and service owners can edit.",
+      "staffNotesEn": "Notes (English)",
+      "staffNotesAr": "Notes (Arabic)",
+      "staffNotesPlaceholder": "Internal instructions or customer-facing guidance…",
+      "staffNotesSave": "Save notes",
+      "staffNotesSaving": "Saving…",
+      "staffNotesSaved": "Notes saved.",
+      "staffNotesSaveFailed": "Could not save notes.",
+      "staffNotesPreview": "Preview for visitors (this language)"
     },
     "clientOffers": {
       "sectionTitle": "Featured offers",
@@ -76,7 +86,8 @@
     "topServices": {
       "title": "Most ordered services",
       "subtitle": "Top 10 (completed orders)",
-      "orders": "{count} orders"
+      "orders": "{count} orders",
+      "platformSuccessTotal": "All successful orders (API + manual): {count}"
     }
   }
 }

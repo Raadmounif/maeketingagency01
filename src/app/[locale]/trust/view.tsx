@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { AdvertisingMediaBlock } from "@/components/AdvertisingMediaBlock";
 import { parseAdvertisingMedia } from "@/lib/advertising-media";
 import { Link } from "@/i18n/routing";
@@ -9,6 +10,7 @@ import {
   placeCustomServiceOrderAction,
   placeSmmGrowthOrderAction,
   placeSmmOfferOrderAction,
+  updateSmmGrowthOrderSectionNotesAction,
 } from "./actions";
 
 function formatUsdFromCents(cents: number) {
@@ -79,6 +81,8 @@ export default function TrustClient({
   isAuthenticated,
   walletBalanceCents,
   showSmmAdminLink,
+  orderSectionNotes,
+  platformSuccessfulOrderTotal,
   manualServices,
   clientBundles,
   topServices,
@@ -89,13 +93,19 @@ export default function TrustClient({
   /** Signed-in user's wallet balance in cents; `null` when not logged in. */
   walletBalanceCents: number | null;
   showSmmAdminLink: boolean;
+  orderSectionNotes: { en: string; ar: string };
+  /** Completed API orders + completed manual-service orders (all-time). */
+  platformSuccessfulOrderTotal: number;
   manualServices: ManualService[];
   clientBundles: ClientOfferBundle[];
   topServices: Array<{ id: string; name: string; rate: string; count: number }>;
 }) {
   const t = useTranslations("smmTrust");
   const navT = useTranslations("nav");
+  const locale = useLocale();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [notesPending, startNotesTransition] = useTransition();
   const [status, setStatus] = useState<string | null>(null);
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [link, setLink] = useState<string>("");
@@ -125,6 +135,15 @@ export default function TrustClient({
   const [bundleModal, setBundleModal] = useState<ClientOfferBundle | null>(null);
   const [bundleLinks, setBundleLinks] = useState<Record<string, string>>({});
   const [bundleOrderMessage, setBundleOrderMessage] = useState<string | null>(null);
+
+  const [draftOrderNotesEn, setDraftOrderNotesEn] = useState(orderSectionNotes.en);
+  const [draftOrderNotesAr, setDraftOrderNotesAr] = useState(orderSectionNotes.ar);
+  const [orderNotesStatus, setOrderNotesStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraftOrderNotesEn(orderSectionNotes.en);
+    setDraftOrderNotesAr(orderSectionNotes.ar);
+  }, [orderSectionNotes.en, orderSectionNotes.ar]);
 
   useEffect(() => {
     startTransition(() => {
@@ -168,6 +187,25 @@ export default function TrustClient({
     estimatedSmmChargeCents > 0 &&
     walletBalanceCents !== null &&
     walletBalanceCents >= estimatedSmmChargeCents;
+
+  const viewerOrderNote = (locale === "ar" ? orderSectionNotes.ar : orderSectionNotes.en).trim();
+  const showOrderNotesSection = showSmmAdminLink || viewerOrderNote.length > 0;
+
+  function saveOrderSectionNotes() {
+    setOrderNotesStatus(null);
+    startNotesTransition(async () => {
+      const res = await updateSmmGrowthOrderSectionNotesAction({
+        notesEn: draftOrderNotesEn,
+        notesAr: draftOrderNotesAr,
+      });
+      if (res.ok) {
+        setOrderNotesStatus(t("order.staffNotesSaved"));
+        router.refresh();
+      } else {
+        setOrderNotesStatus(t("order.staffNotesSaveFailed"));
+      }
+    });
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -236,10 +274,6 @@ export default function TrustClient({
         <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-5">
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl space-y-3">
-              <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-xl border border-[#2C4E7A]/15 bg-white px-3 py-2 text-xs font-medium text-[#2C4E7A] shadow-sm sm:py-1.5">
-                {t("hero.kicker")}
-              </div>
-
               <h1 className="text-[1.65rem] font-bold leading-tight tracking-tight text-[#1F3A5F] sm:text-4xl sm:leading-tight md:text-5xl">
                 {t("hero.title")}
               </h1>
@@ -328,11 +362,18 @@ export default function TrustClient({
 
         {topServices.length ? (
           <section className="mt-5 rounded-xl border border-[#2C4E7A]/10 bg-white p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-sm font-semibold text-[#1F3A5F]">
                 {t("topServices.title")}
               </div>
-              <div className="text-xs text-[#2C4E7A]/75">{t("topServices.subtitle")}</div>
+              <div className="flex flex-col items-start gap-1 sm:items-end">
+                <div className="text-xs text-[#2C4E7A]/75">{t("topServices.subtitle")}</div>
+                {platformSuccessfulOrderTotal > 0 ? (
+                  <div className="text-xs font-medium text-[#1F3A5F]">
+                    {t("topServices.platformSuccessTotal", { count: platformSuccessfulOrderTotal })}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {topServices.map((s) => (
@@ -450,6 +491,66 @@ export default function TrustClient({
             </button>
           </div>
         </div>
+
+        {showOrderNotesSection ? (
+          <div className="mt-4 rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm">
+            <div className="text-sm font-semibold text-[#1F3A5F]">{t("order.staffNotesTitle")}</div>
+            <p className="mt-1 text-xs text-[#2C4E7A]/80">{t("order.staffNotesHelp")}</p>
+
+            {showSmmAdminLink ? (
+              <div className="mt-4 space-y-4">
+                <label className="block">
+                  <div className="text-sm font-semibold text-[#1F3A5F]">{t("order.staffNotesEn")}</div>
+                  <textarea
+                    value={draftOrderNotesEn}
+                    onChange={(e) => setDraftOrderNotesEn(e.target.value)}
+                    rows={4}
+                    placeholder={t("order.staffNotesPlaceholder")}
+                    className="mt-2 w-full resize-y rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
+                  />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-semibold text-[#1F3A5F]">{t("order.staffNotesAr")}</div>
+                  <textarea
+                    value={draftOrderNotesAr}
+                    onChange={(e) => setDraftOrderNotesAr(e.target.value)}
+                    rows={4}
+                    placeholder={t("order.staffNotesPlaceholder")}
+                    className="mt-2 w-full resize-y rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
+                  />
+                </label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-xs text-[#2C4E7A]/80">{orderNotesStatus ?? ""}</div>
+                  <button
+                    type="button"
+                    disabled={notesPending}
+                    onClick={saveOrderSectionNotes}
+                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                  >
+                    {notesPending ? t("order.staffNotesSaving") : t("order.staffNotesSave")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {!showSmmAdminLink && viewerOrderNote ? (
+              <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-[#2C4E7A]/90">
+                {viewerOrderNote}
+              </div>
+            ) : null}
+
+            {showSmmAdminLink && viewerOrderNote ? (
+              <div className="mt-6 border-t border-[#2C4E7A]/10 pt-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+                  {t("order.staffNotesPreview")}
+                </div>
+                <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#2C4E7A]/90">
+                  {viewerOrderNote}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {clientBundles.length > 0 ? (
           <section

@@ -29,6 +29,14 @@ export default async function TrustPage() {
   }
   const showSmmAdminLink = canAccessSmmAdmin(session);
   const adBoard = await getSmmAdvertisingBoardForLocale(locale);
+  const siteNotes = await prisma.siteSettings.findUnique({
+    where: { id: 1 },
+    select: { smmGrowthOrderNotesEn: true, smmGrowthOrderNotesAr: true },
+  });
+  const orderSectionNotes = {
+    en: siteNotes?.smmGrowthOrderNotesEn?.trim() ?? "",
+    ar: siteNotes?.smmGrowthOrderNotesAr?.trim() ?? "",
+  };
 
   const rules = (await prisma.smmMarkupRule.findMany({
     orderBy: { updatedAt: "desc" },
@@ -64,6 +72,12 @@ export default async function TrustPage() {
   });
 
   const visibleCategories = categories.filter((c) => c.services.length > 0);
+
+  const [apiCompletedCount, manualDoneCount] = await Promise.all([
+    prisma.smmOrder.count({ where: { status: "COMPLETED" } }),
+    prisma.customServiceOrder.count({ where: { status: "DONE" } }),
+  ]);
+  const platformSuccessfulOrderTotal = apiCompletedCount + manualDoneCount;
 
   const topOrdered = await prisma.smmOrder.groupBy({
     by: ["serviceId"],
@@ -173,6 +187,8 @@ export default async function TrustPage() {
   return (
     <TrustClient
       showSmmAdminLink={showSmmAdminLink}
+      orderSectionNotes={orderSectionNotes}
+      platformSuccessfulOrderTotal={platformSuccessfulOrderTotal}
       isAuthenticated={Boolean(session?.user)}
       walletBalanceCents={walletBalanceCents}
       adBoard={adBoard}

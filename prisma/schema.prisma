@@ -83,11 +83,18 @@ model SiteSettings {
   instagramUrl String? @db.VarChar(512)
   youtubeUrl   String? @db.VarChar(512)
 
+  /** Header “Contact us” link (https). */
+  contactUsUrl String? @db.VarChar(512)
+
   /**
    * Editable marketing copy (per-locale) for landing page sections + footer contact.
    * Stored as JSON to keep the schema flexible while the site evolves.
    */
   marketingContent Json?
+
+  /** Staff-visible notes under the SMM Growth catalog order form (per UI locale). */
+  smmGrowthOrderNotesEn String? @db.Text
+  smmGrowthOrderNotesAr String? @db.Text
 
   updatedAt DateTime @updatedAt
 }

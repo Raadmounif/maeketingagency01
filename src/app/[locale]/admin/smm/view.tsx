@@ -16,6 +16,7 @@ import {
   updateSmmProviderSettingsAction,
   updateSmmServiceClientCopyAction,
   updateSmmServiceVisibilityAction,
+  upsertSmmServiceMarkupPercentAction,
 } from "./actions";
 
 type ServiceRow = {
@@ -26,6 +27,8 @@ type ServiceRow = {
   clientDescription: string | null;
   enabledForClients: boolean;
   enabledForResellers: boolean;
+  /** When set, overrides default markup % for this API service (clients + resellers). */
+  markupPercent: number | null;
 };
 
 type CategoryRow = {
@@ -710,18 +713,22 @@ export default function SmmAdminClient({
   }, [catalogVersion, defaults.categories]);
 
   const [clientCopy, setClientCopy] = useState<Record<string, { t: string; d: string }>>({});
+  const [markupDraft, setMarkupDraft] = useState<Record<string, string>>({});
   useEffect(() => {
     startUiTransition(() => {
       const m: Record<string, { t: string; d: string }> = {};
+      const mk: Record<string, string> = {};
       for (const c of defaults.categories) {
         for (const s of c.services) {
           m[s.id] = {
             t: s.clientTitle ?? "",
             d: s.clientDescription ?? "",
           };
+          mk[s.id] = s.markupPercent != null ? String(s.markupPercent) : "";
         }
       }
       setClientCopy(m);
+      setMarkupDraft(mk);
     });
   }, [catalogVersion, defaults.categories]);
 
@@ -828,6 +835,19 @@ export default function SmmAdminClient({
         clientDescription: row.d,
       });
       setStatus(res.ok ? "Saved client-facing copy." : res.message);
+      if (res.ok) refresh();
+    });
+  }
+
+  function saveServiceMarkup(serviceId: string, categoryId: string) {
+    setStatus(null);
+    startUiTransition(async () => {
+      const res = await upsertSmmServiceMarkupPercentAction({
+        serviceId,
+        categoryId,
+        percentText: markupDraft[serviceId] ?? "",
+      });
+      setStatus(res.ok ? "Saved API markup for service." : res.message);
       if (res.ok) refresh();
     });
   }
@@ -1005,13 +1025,16 @@ export default function SmmAdminClient({
         </label>
 
         <label className="block">
-          <div className="text-sm font-semibold text-[#1F3A5F]">Global markup (%)</div>
+          <div className="text-sm font-semibold text-[#1F3A5F]">Default markup (%)</div>
           <input
             value={globalMarkupPercent}
             onChange={(e) => setGlobalMarkupPercent(e.target.value)}
             inputMode="numeric"
             className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
           />
+          <div className="mt-2 text-xs text-[#2C4E7A]/75">
+            Fallback when a catalog service has no custom &quot;API markup&quot; below. Per-service overrides win.
+          </div>
         </label>
 
         <label className="block">
@@ -1151,6 +1174,37 @@ export default function SmmAdminClient({
                               />
                               Reseller
                             </label>
+                          </div>
+                        </div>
+                        <div className="space-y-2 border-t border-[#2C4E7A]/8 bg-[#F5F7FA]/60 px-4 py-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/75">
+                            API markup (this service)
+                          </div>
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                            <label className="block min-w-0 flex-1 text-xs text-[#1F3A5F]">
+                              Markup % (PERCENT on provider rate)
+                              <input
+                                value={markupDraft[s.id] ?? ""}
+                                onChange={(e) =>
+                                  setMarkupDraft((prev) => ({ ...prev, [s.id]: e.target.value }))
+                                }
+                                inputMode="decimal"
+                                placeholder={`Default ${globalMarkupPercent}%`}
+                                className="mt-1 h-10 w-full rounded-lg border border-[#2C4E7A]/15 bg-white px-3 py-2 text-sm text-[#1F3A5F]"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => saveServiceMarkup(s.id, cat.id)}
+                              className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm ring-1 ring-[#2C4E7A]/15 disabled:opacity-60"
+                            >
+                              Save markup
+                            </button>
+                          </div>
+                          <div className="text-[11px] text-[#2C4E7A]/75">
+                            Leave empty to use the default % above. Applies to SMM Growth and reseller API pricing for
+                            this service.
                           </div>
                         </div>
                         <div className="space-y-2 border-t border-[#2C4E7A]/8 bg-[#F5F7FA]/60 px-4 py-3">

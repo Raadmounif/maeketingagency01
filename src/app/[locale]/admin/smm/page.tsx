@@ -12,6 +12,14 @@ export default async function SmmAdminPage() {
     where: { scope: "GLOBAL", categoryId: null, serviceId: null },
   });
 
+  const serviceMarkupRules = await prisma.smmMarkupRule.findMany({
+    where: { scope: "SERVICE", serviceId: { not: null } },
+    select: { serviceId: true, value: true },
+  });
+  const markupPercentByServiceId = new Map(
+    serviceMarkupRules.map((r) => [String(r.serviceId), Number(r.value)]),
+  );
+
   const categories = await prisma.smmCategory.findMany({
     orderBy: [{ sort: "asc" }, { providerName: "asc" }],
     include: {
@@ -120,6 +128,9 @@ export default async function SmmAdminPage() {
                   clientDescription: s.clientDescription,
                   enabledForClients: s.enabledForClients,
                   enabledForResellers: s.enabledForResellers,
+                  markupPercent: markupPercentByServiceId.has(s.id)
+                    ? markupPercentByServiceId.get(s.id)!
+                    : null,
                 })),
               })),
             }}

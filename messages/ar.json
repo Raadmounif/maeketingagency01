@@ -10,7 +10,8 @@
     "admin": "الإدارة",
     "login": "تسجيل الدخول",
     "getStarted": "ابدأ الآن",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "contactUs": "تواصل معنا"
   },
   "lang": {
     "switchToArabic": "العربية",
@@ -18,7 +19,6 @@
   },
   "smmTrust": {
     "hero": {
-      "kicker": "🚀 السيرفر رقم 1 في الشرق الأوسط",
       "title": "عزّز وجودك الرقمي مع SMM Growth",
       "subtitle": "خدمات التسويق عبر السوشيال من لوحة واحدة — أسعار واضحة، سرعة، وموثوقية.",
       "login": "تسجيل الدخول",
@@ -44,7 +44,17 @@
       "placing": "جاري الإرسال…",
       "orderSuccess": "تم إنشاء الطلب (المرجع {id}).",
       "min": "الحد الأدنى",
-      "max": "الحد الأقصى"
+      "max": "الحد الأقصى",
+      "staffNotesTitle": "ملاحظات الفريق (تحت النموذج)",
+      "staffNotesHelp": "تظهر لجميع زوار الصفحة. للتعليمات أو التحذيرات أو SLAs. يمكن لمسؤول المنصة ومالك الخدمة التعديل.",
+      "staffNotesEn": "ملاحظات (إنجليزي)",
+      "staffNotesAr": "ملاحظات (عربي)",
+      "staffNotesPlaceholder": "تعليمات داخلية أو إرشادات للعملاء…",
+      "staffNotesSave": "حفظ الملاحظات",
+      "staffNotesSaving": "جاري الحفظ…",
+      "staffNotesSaved": "تم حفظ الملاحظات.",
+      "staffNotesSaveFailed": "تعذر حفظ الملاحظات.",
+      "staffNotesPreview": "معاينة للزوار (هذه اللغة)"
     },
     "clientOffers": {
       "sectionTitle": "عروض مميزة",
@@ -76,7 +86,8 @@
     "topServices": {
       "title": "الأكثر طلبًا",
       "subtitle": "أفضل 10 (طلبات مكتملة)",
-      "orders": "{count} طلب"
+      "orders": "{count} طلب",
+      "platformSuccessTotal": "إجمالي الطلبات الناجحة (واجهة API + يدوي): {count}"
     }
   }
 }

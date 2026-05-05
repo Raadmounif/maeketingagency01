@@ -9,6 +9,15 @@ function dollarsToCents(usd: number) {
   return Math.max(0, Math.ceil(usd * 100 - 1e-9));
 }
 
+function isValidHttpUrl(s: string) {
+  try {
+    const u = new URL(s);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export async function createPaymentRequestAction(input: {
   methodId: string;
   amountUsd: number;
@@ -34,7 +43,21 @@ export async function createPaymentRequestAction(input: {
   if (!method) return { ok: false as const, message: "Payment method not available." };
 
   const note = String(input.clientNote ?? "").trim().slice(0, 512) || null;
-  const proofUrl = String(input.proofUrl ?? "").trim().slice(0, 512) || null;
+  const proofUrlRaw = String(input.proofUrl ?? "").trim().slice(0, 512);
+  const proofUrl = proofUrlRaw.length ? proofUrlRaw : null;
+
+  const textProof = (note ?? "").trim().length >= 3;
+  const photoProof = Boolean(proofUrl && isValidHttpUrl(proofUrl));
+  if (!textProof && !photoProof) {
+    return {
+      ok: false as const,
+      message:
+        "Please add payment proof: paste a screenshot URL (https://…) and/or a short description of your transfer (at least 3 characters).",
+    };
+  }
+  if (proofUrlRaw && !photoProof) {
+    return { ok: false as const, message: "Proof URL must start with http:// or https://." };
+  }
 
   await prisma.paymentRequest.create({
     data: {
@@ -43,7 +66,7 @@ export async function createPaymentRequestAction(input: {
       amountCents,
       status: "PENDING",
       clientNote: note,
-      proofUrl,
+      proofUrl: photoProof ? proofUrl : null,
     },
   });
 

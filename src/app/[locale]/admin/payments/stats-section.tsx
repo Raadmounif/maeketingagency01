@@ -26,7 +26,7 @@ export function PaymentsStatsSection({ stats }: { stats: PaymentsStatsSnapshot }
       <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Pending payments" value={String(stats.pendingPayments)} />
         <StatCard label="Approved payments" value={String(stats.approvedPayments)} />
-        <StatCard label="Successful orders" value={String(stats.successfulOrders)} />
+        <StatCard label="Successful orders (API + manual)" value={String(stats.successfulOrders)} />
         <StatCard
           label="Charged / uncharged accounts"
           value={`${stats.chargedUsers} / ${stats.unchargedUsers}`}
