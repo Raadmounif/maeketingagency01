@@ -15,7 +15,7 @@ export default async function ManualServicesAdminPage() {
     take: 300,
     include: {
       user: { select: { email: true, name: true } },
-      service: { select: { id: true, name: true, priceUsd: true } },
+      service: { select: { id: true, name: true, unitPriceUsd: true } },
     },
   });
 
@@ -58,7 +58,7 @@ export default async function ManualServicesAdminPage() {
               id: s.id,
               name: s.name,
               description: s.description,
-              priceUsd: s.priceUsd.toString(),
+              unitPriceUsd: s.unitPriceUsd.toString(),
               enabled: s.enabled,
               sort: s.sort,
               updatedAt: s.updatedAt.toISOString(),
@@ -67,12 +67,15 @@ export default async function ManualServicesAdminPage() {
               id: o.id,
               status: o.status,
               createdAt: o.createdAt.toISOString(),
-              clientNote: o.clientNote,
+              link: o.link,
+              units: o.units,
+              totalUsd: o.totalUsd.toString(),
               userEmail: o.user.email,
               userName: o.user.name,
               serviceId: o.service.id,
               serviceName: o.service.name,
-              priceUsd: o.service.priceUsd.toString(),
+              unitPriceUsd: o.service.unitPriceUsd.toString(),
+              clientNote: o.clientNote,
             }))}
           />
         </div>

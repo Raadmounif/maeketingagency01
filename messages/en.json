@@ -11,11 +11,271 @@
     "login": "Login",
     "getStarted": "Get started",
     "signOut": "Sign out",
-    "contactUs": "Contact us"
+    "contactUs": "Contact us",
+    "dashboardSectionsTitle": "Dashboard sections",
+    "dashboardOverview": "Overview",
+    "dashboardAddFunds": "Add funds",
+    "dashboardPayments": "My payments",
+    "dashboardOrders": "Ordered services"
   },
   "lang": {
     "switchToArabic": "العربية",
     "switchToEnglish": "English"
+  },
+  "marketing": {
+    "hero": {
+      "ctaDashboard": "Go to dashboard",
+      "ctaGetStarted": "Get started",
+      "ctaExploreServices": "Explore services"
+    },
+    "features": {
+      "title": "Services",
+      "openService": "Open service",
+      "fullDirectory": "Full service directory"
+    },
+    "footer": {
+      "navigate": "Navigate",
+      "serviceDirectory": "Service directory",
+      "rights": "All rights reserved."
+    },
+    "ctaBand": {
+      "title": "Ready to accelerate your next shift?",
+      "subtitle": "Start with a shared account, pick a service module, and keep momentum compounding—safely.",
+      "createAccount": "Create account",
+      "signIn": "Sign in"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "subtitle": "Use your PalmyraShift account to access services.",
+      "email": "Email",
+      "password": "Password",
+      "emailPlaceholder": "you@company.com",
+      "invalid": "Invalid email or password.",
+      "signingIn": "Signing in...",
+      "signIn": "Sign in",
+      "noAccount": "Don't have an account?",
+      "createOne": "Create one"
+    },
+    "register": {
+      "title": "Create account",
+      "subtitle": "One account works across all PalmyraShift services.",
+      "nameOptional": "Name (optional)",
+      "namePlaceholder": "Your name",
+      "email": "Email",
+      "password": "Password",
+      "emailPlaceholder": "you@company.com",
+      "passwordPlaceholder": "At least 8 characters",
+      "creating": "Creating...",
+      "createAccount": "Create account",
+      "alreadyHave": "Already have an account?",
+      "login": "Login"
+    }
+  },
+  "servicesPage": {
+    "title": "Services",
+    "subtitlePrefix": "Pick a service to explore its page under your domain path, for example",
+    "view": "View",
+    "route": "Route"
+  },
+  "adminSmm": {
+    "page": {
+      "crumb": "Admin",
+      "title": "SMM Growth",
+      "subtitle": "Sync provider catalog, configure markup, and enable/disable services for clients and resellers. Default is OFF.",
+      "backToAdmin": "Back to Admin",
+      "openSmmGrowth": "Open SMM Growth"
+    },
+    "sections": {
+      "ads": "SMM Growth — advertising board",
+      "offers": "Featured offers",
+      "manual": "Manual services (custom)",
+      "reseller": "Reseller API & wallet credit",
+      "provider": "Provider & pricing",
+      "catalog": "Catalog & service visibility"
+    },
+    "manual": {
+      "help": "Create and manage manual services and update their order statuses.",
+      "open": "Open manual services"
+    },
+    "status": {
+      "createdClientCategory": "Created client category.",
+      "savedCategory": "Saved category.",
+      "deletedCategory": "Deleted category.",
+      "addedServiceToCategory": "Added service to client category.",
+      "removedServiceFromCategory": "Removed service from category.",
+      "savedProviderSettings": "Saved provider settings.",
+      "syncedImported": "Synced. Imported {count} services.",
+      "syncFailed": "Sync failed.",
+      "updatedVisibility": "Updated visibility.",
+      "savedClientCopy": "Saved client-facing copy.",
+      "savedApiMarkup": "Saved API markup for service.",
+      "issuedResellerKey": "Issued reseller API key (shown once).",
+      "creditedWallet": "Credited wallet.",
+      "saved": "Saved."
+    },
+    "reseller": {
+      "title": "Reseller API",
+      "endpointPrefix": "Endpoint:",
+      "supportedActions": "Supported actions:",
+      "userEmail": "User email",
+      "resellerDiscount": "Reseller discount (%)",
+      "issueKey": "Issue / rotate API key",
+      "apiKeyCopyNow": "API key (copy now)",
+      "walletCredit": "Wallet credit",
+      "amountUsd": "Amount (USD)",
+      "creditWallet": "Credit wallet",
+      "resellerEmailPlaceholder": "reseller@example.com"
+    },
+    "provider": {
+      "baseUrl": "Provider base URL",
+      "baseUrlPlaceholder": "https://smmturk.org",
+      "apiKeyHintPrefix": "API key is read from server env",
+      "defaultMarkup": "Default markup (%)",
+      "defaultMarkupHint": "Fallback when a catalog service has no custom \"API markup\" below. Per-service overrides win.",
+      "resellerMinMargin": "Reseller min margin (%)",
+      "saving": "Saving...",
+      "saveSettings": "Save settings",
+      "syncing": "Syncing...",
+      "syncCatalog": "Sync catalog"
+    },
+    "catalog": {
+      "visibilityTitle": "Service visibility",
+      "visibilityHint": "Default is OFF. Enable separately for Clients and Resellers.",
+      "searchPlaceholder": "Search by name or provider ID…",
+      "clients": "Clients",
+      "resellers": "Resellers",
+      "selectAll": "Select all",
+      "unselectAll": "Unselect all"
+    }
+    ,
+    "ads": {
+      "sectionTitle": "SMM Growth page — advertising board",
+      "sectionHelpPrefix": "Shown on the public",
+      "sectionHelpSuffix": "page for the matching site language when enabled. Platform admins and SMM Growth admins can edit both languages. Media: HTTPS image, GIF, .mp4/.webm, or YouTube/Vimeo links.",
+      "langEn": "English (en)",
+      "langAr": "Arabic (ar)",
+      "title": "Title",
+      "body": "Body",
+      "uploadPhoto": "Upload photo",
+      "uploading": "Uploading…",
+      "removePhoto": "Remove photo",
+      "saveEn": "Save English board",
+      "saveAr": "Save Arabic board",
+      "savedBoard": "Saved {lang} advertising board."
+      ,
+      "topServicesTitle": "Our top services",
+      "topServicesHelp": "Manually curate a list of services shown to clients on /trust. Clicking a card will jump to ordering.",
+      "pickType": "Type",
+      "pickItem": "Item",
+      "pickSort": "Sort",
+      "pickApi": "API service",
+      "pickManual": "Manual service",
+      "pickOffer": "Featured offer",
+      "addPick": "Add",
+      "noPicks": "No top services added yet.",
+      "pickEnabled": "Enabled",
+      "pickHidden": "Hidden",
+      "deletePick": "Delete"
+    }
+  },
+  "adminOverview": {
+    "stats": {
+      "title": "Overview & statistics",
+      "pendingPayments": "Pending payments",
+      "approvedPaymentsClick": "Approved payments (click)",
+      "successfulOrders": "Successful orders (API + manual)",
+      "chargedUncharged": "Charged / uncharged accounts",
+      "approvedDetailsTitle": "Approved payments — details",
+      "when": "When",
+      "client": "Client",
+      "method": "Method",
+      "amount": "Amount",
+      "note": "Note",
+      "proof": "Proof",
+      "noApprovedYet": "No approved payments yet.",
+      "open": "Open",
+      "mostOrdered": "Most ordered services",
+      "service": "Service",
+      "completedOrders": "Completed orders",
+      "noCompletedYet": "No completed orders yet."
+      ,
+      "allOrdersTitle": "All ordered services",
+      "apiOrders": "API orders",
+      "manualOrders": "Manual orders",
+      "offerOrders": "Featured offer orders",
+      "status": "Status",
+      "serviceOrOffer": "Service / offer",
+      "details": "Details",
+      "noOrders": "No orders yet."
+    }
+  },
+  "adminPayments": {
+    "page": {
+      "crumb": "Admin",
+      "title": "Payments",
+      "subtitle": "Configure payment methods and approve pending top-ups.",
+      "pending": "Pending",
+      "approved": "Approved",
+      "backToAdmin": "Back to Admin",
+      "openDashboard": "Open dashboard"
+    },
+    "methods": {
+      "sectionTitle": "Payment methods",
+      "help": "These methods appear when clients add funds from the dashboard.",
+      "created": "Created method.",
+      "name": "Name",
+      "descriptionOptional": "Description text (optional)",
+      "photoUrlOptional": "Photo URL (optional)",
+      "sort": "Sort",
+      "enabled": "Enabled",
+      "saving": "Saving…",
+      "addMethod": "Add method",
+      "tableName": "Name",
+      "tableEnabled": "Enabled",
+      "tableSort": "Sort",
+      "tablePhotoUrl": "Photo URL",
+      "saved": "Saved.",
+      "deleted": "Deleted.",
+      "deleteConfirm": "Delete this payment method? (Only allowed if it has no requests)"
+    },
+    "requests": {
+      "sectionTitle": "Payment requests",
+      "help": "Approving credits the user wallet. Platform admin can refund (debit) approved payments.",
+      "show": "Show",
+      "filterPending": "Pending",
+      "filterApproved": "Approved",
+      "filterAll": "All",
+      "tableWhen": "When",
+      "tableClient": "Client",
+      "tableMethod": "Method",
+      "tableAmount": "Amount",
+      "tableStatus": "Status",
+      "tableNote": "Note",
+      "tableProof": "Proof",
+      "none": "—",
+      "open": "Open",
+      "noRequests": "No requests.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approvedFlash": "Approved.",
+      "rejectedFlash": "Rejected.",
+      "refund": "Refund",
+      "refundConfirm": "Refund this payment? This will debit the user's wallet.",
+      "refundedFlash": "Refunded."
+    }
+  },
+  "dashboardPage": {
+    "title": "Dashboard",
+    "walletBalance": "Wallet balance:",
+    "addFunds": "Add funds",
+    "myPayments": "My payments",
+    "orderedServices": "Ordered services",
+    "submitting": "Submitting…",
+    "submitRequest": "Submit request",
+    "paymentCreated": "Payment request created.",
+    "requestFailed": "Request failed."
   },
   "smmTrust": {
     "hero": {
@@ -23,6 +283,10 @@
       "subtitle": "Social media marketing from one dashboard — clear pricing, speed, and reliability.",
       "login": "Log in",
       "register": "Create account"
+    },
+    "topPicks": {
+      "title": "Our top services",
+      "help": "Quick shortcuts to the most popular services and offers."
     },
     "order": {
       "sectionTitle": "Place an order",
@@ -76,8 +340,9 @@
       "order": "Order",
       "loginToOrder": "Log in to order",
       "confirmTitle": "Confirm order",
-      "noteLabel": "Note for our team (optional)",
-      "notePlaceholder": "Links, targets, deadlines…",
+      "manualUrl": "URL",
+      "manualUnits": "Units",
+      "manualTotal": "Total",
       "cancel": "Cancel",
       "submitOrder": "Submit order",
       "placing": "Submitting…",

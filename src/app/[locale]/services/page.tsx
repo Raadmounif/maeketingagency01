@@ -1,16 +1,18 @@
 import { Link } from "@/i18n/routing";
 import { serviceCatalog } from "@/lib/services-catalog";
+import { getTranslations } from "next-intl/server";
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const t = await getTranslations("servicesPage");
   return (
     <main className="flex-1 bg-white px-4 py-12 md:py-16">
       <div className="mx-auto w-full max-w-6xl">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-[#1F3A5F] md:text-4xl">
-            Services
+            {t("title")}
           </h1>
           <p className="max-w-2xl text-lg text-[#2C4E7A]/90">
-            Pick a service to explore its page under your domain path, for example{" "}
+            {t("subtitlePrefix")}{" "}
             <span className="font-mono font-medium text-[#1F3A5F]">/trust</span>.
           </p>
         </div>
@@ -32,11 +34,11 @@ export default function ServicesPage() {
                   </div>
                 </div>
                 <div className="shrink-0 rounded-full bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-3 py-1 text-xs font-semibold text-[#1F3A5F] shadow-sm">
-                  View
+                  {t("view")}
                 </div>
               </div>
               <div className="mt-4 text-xs text-[#2C4E7A]/70">
-                Route: <span className="font-mono text-[#1F3A5F]">/{s.slug}</span>
+                {t("route")}: <span className="font-mono text-[#1F3A5F]">/{s.slug}</span>
               </div>
             </Link>
           ))}

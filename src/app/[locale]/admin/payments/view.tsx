@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import {
   approvePaymentRequestAction,
@@ -42,6 +43,7 @@ export default function PaymentsAdminClient(props: {
   methods: MethodRow[];
   requests: RequestRow[];
 }) {
+  const t = useTranslations("adminPayments");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -70,9 +72,9 @@ export default function PaymentsAdminClient(props: {
         </div>
       ) : null}
 
-      <CollapsibleSection id="admin-payments-methods" title="Payment methods">
+      <CollapsibleSection id="admin-payments-methods" title={t("methods.sectionTitle")}>
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
-          These methods appear when clients add funds from the dashboard.
+          {t("methods.help")}
         </p>
 
         <form
@@ -96,13 +98,13 @@ export default function PaymentsAdminClient(props: {
               setNewMediaUrl("");
               setNewEnabled(true);
               setNewSort("0");
-              flash("Created method.");
+              flash(t("methods.created"));
             });
           }}
         >
           <label className="block md:col-span-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Name
+              {t("methods.name")}
             </div>
             <input
               className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
@@ -115,7 +117,7 @@ export default function PaymentsAdminClient(props: {
           </label>
           <label className="block md:col-span-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Description text (optional)
+              {t("methods.descriptionOptional")}
             </div>
             <textarea
               className="mt-2 min-h-[80px] w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 py-2 text-sm text-[#1F3A5F]"
@@ -126,7 +128,7 @@ export default function PaymentsAdminClient(props: {
           </label>
           <label className="block">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Photo URL (optional)
+              {t("methods.photoUrlOptional")}
             </div>
             <input
               className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
@@ -139,7 +141,7 @@ export default function PaymentsAdminClient(props: {
           </label>
           <label className="block">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Sort
+              {t("methods.sort")}
             </div>
             <input
               className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
@@ -156,7 +158,7 @@ export default function PaymentsAdminClient(props: {
               onChange={(e) => setNewEnabled(e.target.checked)}
               disabled={pending}
             />
-            Enabled
+            {t("methods.enabled")}
           </label>
           <div className="md:col-span-2 flex justify-end">
             <button
@@ -164,7 +166,7 @@ export default function PaymentsAdminClient(props: {
               disabled={pending}
               className="inline-flex h-11 items-center justify-center rounded-xl bg-[#1F3A5F] px-5 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {pending ? "Saving…" : "Add method"}
+              {pending ? t("methods.saving") : t("methods.addMethod")}
             </button>
           </div>
         </form>
@@ -173,10 +175,10 @@ export default function PaymentsAdminClient(props: {
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Enabled</th>
-                <th className="px-3 py-2">Sort</th>
-                <th className="px-3 py-2">Photo URL</th>
+                <th className="px-3 py-2">{t("methods.tableName")}</th>
+                <th className="px-3 py-2">{t("methods.tableEnabled")}</th>
+                <th className="px-3 py-2">{t("methods.tableSort")}</th>
+                <th className="px-3 py-2">{t("methods.tablePhotoUrl")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -196,22 +198,22 @@ export default function PaymentsAdminClient(props: {
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection id="admin-payments-requests" title="Payment requests">
+      <CollapsibleSection id="admin-payments-requests" title={t("requests.sectionTitle")}>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <p className="text-sm text-[#2C4E7A]/85">
-            Approving credits the user wallet. Platform admin can refund (debit) approved payments.
+            {t("requests.help")}
           </p>
           <label className="text-sm text-[#1F3A5F]">
-            <span className="mr-2 font-medium">Show</span>
+            <span className="mr-2 font-medium">{t("requests.show")}</span>
             <select
               className="rounded-lg border border-[#2C4E7A]/20 bg-white px-3 py-2"
               value={requestFilter}
               onChange={(e) => setRequestFilter(e.target.value as typeof requestFilter)}
               disabled={pending}
             >
-              <option value="PENDING">Pending</option>
-              <option value="APPROVED">Approved</option>
-              <option value="ALL">All</option>
+              <option value="PENDING">{t("requests.filterPending")}</option>
+              <option value="APPROVED">{t("requests.filterApproved")}</option>
+              <option value="ALL">{t("requests.filterAll")}</option>
             </select>
           </label>
         </div>
@@ -220,13 +222,13 @@ export default function PaymentsAdminClient(props: {
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
-                <th className="px-3 py-2">When</th>
-                <th className="px-3 py-2">Client</th>
-                <th className="px-3 py-2">Method</th>
-                <th className="px-3 py-2">Amount</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Note</th>
-                <th className="px-3 py-2">Proof</th>
+                <th className="px-3 py-2">{t("requests.tableWhen")}</th>
+                <th className="px-3 py-2">{t("requests.tableClient")}</th>
+                <th className="px-3 py-2">{t("requests.tableMethod")}</th>
+                <th className="px-3 py-2">{t("requests.tableAmount")}</th>
+                <th className="px-3 py-2">{t("requests.tableStatus")}</th>
+                <th className="px-3 py-2">{t("requests.tableNote")}</th>
+                <th className="px-3 py-2">{t("requests.tableProof")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -234,7 +236,7 @@ export default function PaymentsAdminClient(props: {
               {filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-3 py-6 text-center text-[#2C4E7A]/75">
-                    No requests.
+                    {t("requests.noRequests")}
                   </td>
                 </tr>
               ) : (
@@ -251,7 +253,7 @@ export default function PaymentsAdminClient(props: {
                     <td className="px-3 py-2 whitespace-nowrap">${formatUsd(r.amountCents)}</td>
                     <td className="px-3 py-2 font-semibold">{r.status}</td>
                     <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]/90">
-                      {r.clientNote ?? "—"}
+                      {r.clientNote ?? t("requests.none")}
                     </td>
                     <td className="px-3 py-2">
                       {r.proofUrl ? (
@@ -261,10 +263,10 @@ export default function PaymentsAdminClient(props: {
                           rel="noreferrer"
                           className="font-semibold text-[#1F3A5F] underline"
                         >
-                          Open
+                          {t("requests.open")}
                         </a>
                       ) : (
-                        "—"
+                        t("requests.none")
                       )}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
@@ -278,11 +280,11 @@ export default function PaymentsAdminClient(props: {
                               startTransition(async () => {
                                 const res = await approvePaymentRequestAction({ id: r.id });
                                 if (!res.ok) flash(res.message);
-                                else flash("Approved.");
+                                else flash(t("requests.approvedFlash"));
                               })
                             }
                           >
-                            Approve
+                            {t("requests.approve")}
                           </button>
                           <button
                             type="button"
@@ -292,11 +294,11 @@ export default function PaymentsAdminClient(props: {
                               startTransition(async () => {
                                 const res = await rejectPaymentRequestAction({ id: r.id });
                                 if (!res.ok) flash(res.message);
-                                else flash("Rejected.");
+                                else flash(t("requests.rejectedFlash"));
                               })
                             }
                           >
-                            Reject
+                            {t("requests.reject")}
                           </button>
                         </div>
                       ) : r.status === "APPROVED" && props.isPlatformAdmin ? (
@@ -305,15 +307,15 @@ export default function PaymentsAdminClient(props: {
                           disabled={pending}
                           className="rounded border border-amber-200 px-3 py-1.5 text-xs font-semibold text-amber-800 disabled:opacity-60"
                           onClick={() => {
-                            if (!window.confirm("Refund this payment? This will debit the user's wallet.")) return;
+                            if (!window.confirm(t("requests.refundConfirm"))) return;
                             startTransition(async () => {
                               const res = await refundPaymentRequestAction({ id: r.id });
                               if (!res.ok) flash(res.message);
-                              else flash("Refunded.");
+                              else flash(t("requests.refundedFlash"));
                             });
                           }}
                         >
-                          Refund
+                          {t("requests.refund")}
                         </button>
                       ) : null}
                     </td>
@@ -335,6 +337,7 @@ function MethodRowEditor(props: {
   onFlash: (m: string) => void;
   startTransition: (fn: () => void) => void;
 }) {
+  const t = useTranslations("adminPayments.methods");
   const [name, setName] = useState(props.row.name);
   const [enabled, setEnabled] = useState(props.row.enabled);
   const [sort, setSort] = useState(String(props.row.sort));
@@ -393,7 +396,7 @@ function MethodRowEditor(props: {
                 sort: Number(sort),
               });
               if (!res.ok) props.onFlash(res.message);
-              else props.onFlash("Saved.");
+              else props.onFlash(t("saved"));
             });
           }}
         >
@@ -405,11 +408,11 @@ function MethodRowEditor(props: {
             disabled={props.pending}
             className="rounded border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:opacity-60"
             onClick={() => {
-              if (!window.confirm("Delete this payment method? (Only allowed if it has no requests)")) return;
+              if (!window.confirm(t("deleteConfirm"))) return;
               props.startTransition(async () => {
                 const res = await deletePaymentMethodAction({ id: props.row.id });
                 if (!res.ok) props.onFlash(res.message);
-                else props.onFlash("Deleted.");
+                else props.onFlash(t("deleted"));
               });
             }}
           >

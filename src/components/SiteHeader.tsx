@@ -38,6 +38,7 @@ export function SiteHeader(props?: {
   const pathname = usePathname();
   const [navHydrated, setNavHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dashNavOpen, setDashNavOpen] = useState(false);
 
   useEffect(() => {
     startTransition(() => {
@@ -46,17 +47,27 @@ export function SiteHeader(props?: {
   }, []);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !dashNavOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [menuOpen]);
+  }, [menuOpen, dashNavOpen]);
+
+  useEffect(() => {
+    if (!dashNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDashNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dashNavOpen]);
 
   useEffect(() => {
     startTransition(() => {
       setMenuOpen(false);
+      setDashNavOpen(false);
     });
   }, [pathname]);
 
@@ -113,10 +124,33 @@ export function SiteHeader(props?: {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#1F3A5F] text-white shadow-md shadow-black/10">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-2 px-3 sm:h-16 sm:px-4 md:h-[4.25rem]">
-        <Link
+        <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
+          {data?.user ? (
+            <button
+              type="button"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 sm:min-h-10 sm:min-w-10"
+              aria-expanded={dashNavOpen}
+              aria-controls="dashboard-sections-nav"
+              aria-label={t("nav.dashboardSectionsTitle")}
+              onClick={() => {
+                setDashNavOpen((o) => {
+                  const next = !o;
+                  if (next) setMenuOpen(false);
+                  return next;
+                });
+              }}
+            >
+              <span className="sr-only">{t("nav.dashboardSectionsTitle")}</span>
+              <MenuIcon open={dashNavOpen} />
+            </button>
+          ) : null}
+          <Link
           href="/"
           className="flex min-w-0 shrink items-center gap-2 sm:gap-3"
-          onClick={() => setMenuOpen(false)}
+          onClick={() => {
+            setMenuOpen(false);
+            setDashNavOpen(false);
+          }}
         >
           <Image
             src="/brand/palmyrashift-logo.png"
@@ -135,6 +169,7 @@ export function SiteHeader(props?: {
             </div>
           </div>
         </Link>
+        </div>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
           {links.map((l) => (
@@ -187,12 +222,6 @@ export function SiteHeader(props?: {
                     {t("nav.admin")}
                   </Link>
                 ) : null}
-                <Link
-                  href="/dashboard"
-                  className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
-                >
-                  {t("nav.dashboard")}
-                </Link>
                 <button
                   type="button"
                   onClick={() =>
@@ -228,13 +257,83 @@ export function SiteHeader(props?: {
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 md:hidden"
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
-            onClick={() => setMenuOpen((o) => !o)}
+            onClick={() =>
+              setMenuOpen((o) => {
+                const next = !o;
+                if (next) setDashNavOpen(false);
+                return next;
+              })
+            }
           >
             <span className="sr-only">{menuOpen ? "Close menu" : "Open menu"}</span>
             <MenuIcon open={menuOpen} />
           </button>
         </div>
       </div>
+
+      {data?.user && dashNavOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 top-14 z-[44] bg-black/45 sm:top-16 md:top-[4.25rem]"
+            aria-label="Close dashboard navigation"
+            onClick={() => setDashNavOpen(false)}
+          />
+          <div
+            id="dashboard-sections-nav"
+            className="fixed bottom-0 start-0 top-14 z-[45] flex w-[min(19rem,88vw)] flex-col border-e border-white/15 bg-[#152d4d] px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:top-16 md:top-[4.25rem]"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("nav.dashboardSectionsTitle")}
+          >
+            <p className="px-2 pb-3 text-[11px] font-semibold uppercase tracking-wide text-white/50">
+              {t("nav.dashboardSectionsTitle")}
+            </p>
+            <nav className="flex flex-col gap-1 overflow-y-auto overscroll-contain" aria-label={t("nav.dashboardSectionsTitle")}>
+              <Link
+                href="/dashboard#dash-overview"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-xl px-4 text-base font-semibold text-white/95 transition hover:bg-white/10 active:bg-white/15"
+                onClick={() => setDashNavOpen(false)}
+              >
+                <span>{t("nav.dashboardOverview")}</span>
+                <span aria-hidden className="text-white/40">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="/dashboard#dash-add-funds"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-xl px-4 text-base font-semibold text-white/95 transition hover:bg-white/10 active:bg-white/15"
+                onClick={() => setDashNavOpen(false)}
+              >
+                <span>{t("nav.dashboardAddFunds")}</span>
+                <span aria-hidden className="text-white/40">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="/dashboard#dash-payments"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-xl px-4 text-base font-semibold text-white/95 transition hover:bg-white/10 active:bg-white/15"
+                onClick={() => setDashNavOpen(false)}
+              >
+                <span>{t("nav.dashboardPayments")}</span>
+                <span aria-hidden className="text-white/40">
+                  →
+                </span>
+              </Link>
+              <Link
+                href="/dashboard#dash-orders"
+                className="flex min-h-12 items-center justify-between gap-3 rounded-xl px-4 text-base font-semibold text-white/95 transition hover:bg-white/10 active:bg-white/15"
+                onClick={() => setDashNavOpen(false)}
+              >
+                <span>{t("nav.dashboardOrders")}</span>
+                <span aria-hidden className="text-white/40">
+                  →
+                </span>
+              </Link>
+            </nav>
+          </div>
+        </>
+      ) : null}
 
       {menuOpen ? (
         <button
@@ -305,13 +404,6 @@ export function SiteHeader(props?: {
                     {t("nav.admin")}
                   </Link>
                 ) : null}
-                <Link
-                  href="/dashboard"
-                  className="flex min-h-12 items-center justify-center rounded-xl bg-white/10 px-4 text-base font-semibold text-white active:bg-white/20"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {t("nav.dashboard")}
-                </Link>
                 <button
                   type="button"
                   className="flex min-h-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-base font-semibold text-white active:bg-white/20"

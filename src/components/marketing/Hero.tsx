@@ -1,10 +1,12 @@
 import { AdvertisingMediaBlock } from "@/components/AdvertisingMediaBlock";
 import { Link } from "@/i18n/routing";
 import type { HeroBoard } from "@/lib/site-settings";
+import { getTranslations } from "next-intl/server";
 import { ButtonCta } from "./ButtonCta";
 import { IconArrowUp } from "./icons";
 
-export function Hero({ board, isAuthenticated }: { board: HeroBoard; isAuthenticated: boolean }) {
+export async function Hero({ board, isAuthenticated }: { board: HeroBoard; isAuthenticated: boolean }) {
+  const t = await getTranslations("marketing.hero");
   const core = (
     <>
       <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-xl border border-[#2C4E7A]/15 bg-white px-3 py-2 text-xs font-medium text-[#2C4E7A] shadow-sm sm:py-1.5">
@@ -52,18 +54,18 @@ export function Hero({ board, isAuthenticated }: { board: HeroBoard; isAuthentic
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             {isAuthenticated ? (
               <ButtonCta href="/dashboard" variant="gradient">
-                Go to dashboard
+                {t("ctaDashboard")}
               </ButtonCta>
             ) : (
               <ButtonCta href="/register" variant="gradient">
-                Get started
+                {t("ctaGetStarted")}
               </ButtonCta>
             )}
             <Link
               href="/services"
               className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-6 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] active:bg-[#E8EDF4] sm:w-auto sm:min-h-12"
             >
-              Explore services
+              {t("ctaExploreServices")}
             </Link>
           </div>
 

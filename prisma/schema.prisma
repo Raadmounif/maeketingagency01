@@ -369,6 +369,30 @@ model SmmAdvertisingBoard {
   updatedAt DateTime @updatedAt
 }
 
+enum SmmTopPickKind {
+  API
+  MANUAL
+  OFFER
+}
+
+/** Admin-curated "Our top services" picks shown on /trust. */
+model SmmTopServicePick {
+  id String @id @default(cuid())
+
+  kind  SmmTopPickKind
+  refId String @db.VarChar(191)
+
+  enabled Boolean @default(true)
+  sort    Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind])
+  @@index([enabled])
+  @@index([sort])
+}
+
 /**
  * Client-facing curated categories for SMM Growth.
  * Each category contains a chosen set of SmmService items, each with its own markup override.
@@ -472,7 +496,8 @@ model CustomService {
   id          String  @id @default(cuid())
   name        String  @db.VarChar(255)
   description String  @db.Text
-  priceUsd    Decimal @db.Decimal(10, 2)
+  /** Price per 1 unit (USD). */
+  unitPriceUsd Decimal @db.Decimal(10, 2)
   enabled     Boolean @default(true)
   sort        Int     @default(0)
 
@@ -497,6 +522,12 @@ model CustomServiceOrder {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   status CustomServiceOrderStatus @default(ORDERED)
+  /** Client input: target URL/profile/post/etc. */
+  link String @db.VarChar(2048)
+  /** Client input: number of units. */
+  units Int
+  /** Total price charged for this order (USD). */
+  totalUsd Decimal @db.Decimal(10, 2)
   /** Optional note from the client when placing the order. */
   clientNote String? @db.VarChar(512)
 

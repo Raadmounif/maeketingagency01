@@ -3,11 +3,12 @@
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { getPathname, Link } from "@/i18n/routing";
 import { safeInternalPathAfterAuth } from "@/lib/safe-internal-path";
 
 export default function LoginView() {
+  const t = useTranslations("auth.login");
   const params = useSearchParams();
   const locale = useLocale();
   const next = useMemo(() => {
@@ -31,7 +32,7 @@ export default function LoginView() {
       redirect: true,
     });
 
-    if (res?.error) setError("Invalid email or password.");
+    if (res?.error) setError("invalid");
     setLoading(false);
   }
 
@@ -39,16 +40,16 @@ export default function LoginView() {
     <main className="flex flex-1 items-center justify-center bg-white px-4 py-14">
       <div className="w-full max-w-md rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-8 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-[#1F3A5F]">
-          Login
+          {t("title")}
         </h1>
         <p className="mt-2 text-sm text-[#2C4E7A]/90">
-          Use your PalmyraShift account to access services.
+          {t("subtitle")}
         </p>
 
         <form className="mt-8 space-y-4" onSubmit={onSubmit}>
           <label className="block">
             <div className="text-sm font-semibold text-[#1F3A5F]">
-              Email
+              {t("email")}
             </div>
             <input
               value={email}
@@ -57,13 +58,13 @@ export default function LoginView() {
               autoComplete="email"
               required
               className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
-              placeholder="you@company.com"
+              placeholder={t("emailPlaceholder")}
             />
           </label>
 
           <label className="block">
             <div className="text-sm font-semibold text-[#1F3A5F]">
-              Password
+              {t("password")}
             </div>
             <input
               value={password}
@@ -78,7 +79,7 @@ export default function LoginView() {
 
           {error ? (
             <div className="rounded-xl border border-red-500/20 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
+              {t(error)}
             </div>
           ) : null}
 
@@ -86,17 +87,17 @@ export default function LoginView() {
             disabled={loading}
             className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-6 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? t("signingIn") : t("signIn")}
           </button>
         </form>
 
         <div className="mt-6 text-sm text-[#2C4E7A]/90">
-          Don&apos;t have an account?{" "}
+          {t("noAccount")}{" "}
           <Link
             href="/register"
             className="font-semibold text-[#1F3A5F] underline-offset-4 hover:underline"
           >
-            Create one
+            {t("createOne")}
           </Link>
           .
         </div>

@@ -50,8 +50,58 @@ export default async function TrustPage() {
     id: s.id,
     name: s.name,
     description: s.description,
-    priceUsd: s.priceUsd.toString(),
+    unitPriceUsd: s.unitPriceUsd.toString(),
   }));
+
+  const topPicksRaw = await prisma.smmTopServicePick.findMany({
+    where: { enabled: true },
+    orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+  });
+  const apiPickIds = topPicksRaw.filter((p) => p.kind === "API").map((p) => p.refId);
+  const manualPickIds = topPicksRaw.filter((p) => p.kind === "MANUAL").map((p) => p.refId);
+  const offerPickIds = topPicksRaw.filter((p) => p.kind === "OFFER").map((p) => p.refId);
+
+  const [apiPickedServices, manualPickedServices, pickedOffers] = await Promise.all([
+    apiPickIds.length
+      ? prisma.smmService.findMany({
+          where: { id: { in: apiPickIds }, enabledForClients: true, isArchived: false },
+          select: { id: true, providerName: true, clientTitle: true },
+        })
+      : [],
+    manualPickIds.length
+      ? prisma.customService.findMany({
+          where: { id: { in: manualPickIds }, enabled: true },
+          select: { id: true, name: true },
+        })
+      : [],
+    offerPickIds.length
+      ? prisma.smmClientCategory.findMany({
+          where: { id: { in: offerPickIds }, enabled: true },
+          select: { id: true, nameEn: true, nameAr: true },
+        })
+      : [],
+  ]);
+
+  const apiNameById = new Map(
+    apiPickedServices.map((s) => [s.id, (s.clientTitle?.trim() || s.providerName).trim()]),
+  );
+  const manualNameById = new Map(manualPickedServices.map((s) => [s.id, s.name]));
+  const offerNameById = new Map(
+    pickedOffers.map((o) => [o.id, locale === "ar" ? o.nameAr : o.nameEn] as const),
+  );
+
+  const topPicks = topPicksRaw
+    .map((p) => {
+      const title =
+        p.kind === "API"
+          ? apiNameById.get(p.refId)
+          : p.kind === "MANUAL"
+            ? manualNameById.get(p.refId)
+            : offerNameById.get(p.refId);
+      if (!title) return null;
+      return { id: p.id, kind: p.kind, refId: p.refId, title };
+    })
+    .filter((x): x is NonNullable<typeof x> => x != null);
 
   /** Per-service markup when a service is assigned to a client category (admin). */
   const clientCategoryItems = await prisma.smmClientCategoryItem.findMany({
@@ -134,7 +184,7 @@ export default async function TrustPage() {
   const clientBundles = clientCategoriesForBundles
     .map((cat) => {
       const options = cat.items
-        .filter((it) => it.service.enabledForClients && !it.service.isArchived)
+        .filter((it) => !it.service.isArchived)
         .map((it) => {
           const s = it.service;
           const overridePct = markupPctByServiceId.get(s.id);
@@ -195,6 +245,7 @@ export default async function TrustPage() {
       manualServices={manualServicesPayload}
       clientBundles={clientBundles}
       topServices={topServices}
+      topPicks={topPicks}
       categories={visibleCategories.map((c) => ({
         id: c.id,
         name: c.providerName,

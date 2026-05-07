@@ -13,7 +13,7 @@ type ServiceRow = {
   id: string;
   name: string;
   description: string;
-  priceUsd: string;
+  unitPriceUsd: string;
   enabled: boolean;
   sort: number;
   updatedAt: string;
@@ -23,12 +23,15 @@ type OrderRow = {
   id: string;
   status: "ORDERED" | "DONE";
   createdAt: string;
-  clientNote: string | null;
+  link: string;
+  units: number;
+  totalUsd: string;
   userEmail: string;
   userName: string | null;
   serviceId: string;
   serviceName: string;
-  priceUsd: string;
+  unitPriceUsd: string;
+  clientNote: string | null;
 };
 
 export default function ManualServicesAdminClient(props: {
@@ -40,7 +43,7 @@ export default function ManualServicesAdminClient(props: {
 
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
-  const [newPrice, setNewPrice] = useState("");
+  const [newUnitPrice, setNewUnitPrice] = useState("");
 
   const [orderFilter, setOrderFilter] = useState<"ALL" | "ORDERED" | "DONE">("ORDERED");
 
@@ -64,7 +67,7 @@ export default function ManualServicesAdminClient(props: {
 
       <CollapsibleSection id="admin-manual-add" title="Add a service">
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
-          Name, description, and price (USD). These are separate from the SMM API catalog.
+          Name, description, and price per 1 unit (USD). These are separate from the SMM API catalog.
         </p>
         <form
           className="mt-4 grid gap-3 md:grid-cols-2"
@@ -74,7 +77,7 @@ export default function ManualServicesAdminClient(props: {
               const res = await createCustomServiceAction({
                 name: newName,
                 description: newDescription,
-                priceUsd: newPrice,
+                unitPriceUsd: newUnitPrice,
               });
               if (!res.ok) {
                 flash(res.message);
@@ -82,7 +85,7 @@ export default function ManualServicesAdminClient(props: {
               }
               setNewName("");
               setNewDescription("");
-              setNewPrice("");
+              setNewUnitPrice("");
               flash("Service created.");
             });
           }}
@@ -112,15 +115,15 @@ export default function ManualServicesAdminClient(props: {
           </label>
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Price (USD)
+              Price per 1 unit (USD)
             </span>
             <input
               type="number"
               step="0.01"
               min="0"
               className="mt-1 w-full rounded-lg border border-[#2C4E7A]/20 bg-white px-3 py-2 text-sm text-[#1F3A5F]"
-              value={newPrice}
-              onChange={(e) => setNewPrice(e.target.value)}
+              value={newUnitPrice}
+              onChange={(e) => setNewUnitPrice(e.target.value)}
               required
             />
           </label>
@@ -143,7 +146,7 @@ export default function ManualServicesAdminClient(props: {
               <tr>
                 <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2">Description</th>
-                <th className="px-3 py-2">Price</th>
+                <th className="px-3 py-2">Unit price</th>
                 <th className="px-3 py-2">Sort</th>
                 <th className="px-3 py-2">On</th>
                 <th className="px-3 py-2" />
@@ -199,7 +202,9 @@ export default function ManualServicesAdminClient(props: {
                 <th className="px-3 py-2">When</th>
                 <th className="px-3 py-2">Service</th>
                 <th className="px-3 py-2">Client</th>
-                <th className="px-3 py-2">Price</th>
+                <th className="px-3 py-2">URL</th>
+                <th className="px-3 py-2">Units</th>
+                <th className="px-3 py-2">Total</th>
                 <th className="px-3 py-2">Note</th>
                 <th className="px-3 py-2">Status</th>
               </tr>
@@ -207,7 +212,7 @@ export default function ManualServicesAdminClient(props: {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[#2C4E7A]/75">
+                  <td colSpan={9} className="px-3 py-6 text-center text-[#2C4E7A]/75">
                     No orders in this view.
                   </td>
                 </tr>
@@ -222,7 +227,13 @@ export default function ManualServicesAdminClient(props: {
                       <div className="font-medium text-[#1F3A5F]">{o.userEmail}</div>
                       {o.userName ? <div className="text-xs">{o.userName}</div> : null}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2">${o.priceUsd}</td>
+                    <td className="max-w-[320px] px-3 py-2 text-[#2C4E7A]/90">
+                      <div className="truncate" title={o.link}>
+                        {o.link}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">{o.units}</td>
+                    <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">${o.totalUsd}</td>
                     <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]/90">
                       {o.clientNote ?? "—"}
                     </td>
@@ -265,7 +276,7 @@ function ServiceEditRow(props: {
 }) {
   const [name, setName] = useState(props.initial.name);
   const [description, setDescription] = useState(props.initial.description);
-  const [priceUsd, setPriceUsd] = useState(props.initial.priceUsd);
+  const [unitPriceUsd, setUnitPriceUsd] = useState(props.initial.unitPriceUsd);
   const [sort, setSort] = useState(String(props.initial.sort));
   const [enabled, setEnabled] = useState(props.initial.enabled);
 
@@ -292,8 +303,8 @@ function ServiceEditRow(props: {
           step="0.01"
           min="0"
           className="w-24 rounded border border-[#2C4E7A]/15 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
-          value={priceUsd}
-          onChange={(e) => setPriceUsd(e.target.value)}
+          value={unitPriceUsd}
+          onChange={(e) => setUnitPriceUsd(e.target.value)}
         />
       </td>
       <td className="px-3 py-2">
@@ -318,7 +329,7 @@ function ServiceEditRow(props: {
                 id: props.initial.id,
                 name,
                 description,
-                priceUsd,
+                unitPriceUsd,
                 enabled,
                 sort: Number(sort),
               });

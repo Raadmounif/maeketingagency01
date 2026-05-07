@@ -66,7 +66,7 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
     take: 200,
     include: {
-      service: { select: { name: true, priceUsd: true } },
+      service: { select: { name: true, unitPriceUsd: true } },
     },
   });
 
@@ -105,7 +105,10 @@ export default async function DashboardPage() {
               id: o.id,
               createdAt: o.createdAt.toISOString(),
               serviceName: o.service.name,
-              priceUsd: o.service.priceUsd.toString(),
+              link: o.link,
+              units: o.units,
+              totalUsd: o.totalUsd.toString(),
+              unitPriceUsd: o.service.unitPriceUsd.toString(),
               status: o.status,
               clientNote: o.clientNote,
             })),

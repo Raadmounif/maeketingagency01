@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AdvertisingMediaBlock } from "@/components/AdvertisingMediaBlock";
 import { parseAdvertisingMedia } from "@/lib/advertising-media";
 import { Link } from "@/i18n/routing";
@@ -61,7 +61,7 @@ type ManualService = {
   id: string;
   name: string;
   description: string;
-  priceUsd: string;
+  unitPriceUsd: string;
 };
 
 /** Admin-defined client category shown as a single “offer” with variants. */
@@ -86,6 +86,7 @@ export default function TrustClient({
   manualServices,
   clientBundles,
   topServices,
+  topPicks,
 }: {
   categories: Category[];
   adBoard: TrustAdBoard | null;
@@ -99,11 +100,13 @@ export default function TrustClient({
   manualServices: ManualService[];
   clientBundles: ClientOfferBundle[];
   topServices: Array<{ id: string; name: string; rate: string; count: number }>;
+  topPicks: Array<{ id: string; kind: "API" | "MANUAL" | "OFFER"; refId: string; title: string }>;
 }) {
   const t = useTranslations("smmTrust");
   const navT = useTranslations("nav");
   const locale = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [notesPending, startNotesTransition] = useTransition();
   const [status, setStatus] = useState<string | null>(null);
@@ -112,7 +115,8 @@ export default function TrustClient({
   const [quantity, setQuantity] = useState<string>("");
   const [manualOrderMessage, setManualOrderMessage] = useState<string | null>(null);
   const [manualModalService, setManualModalService] = useState<ManualService | null>(null);
-  const [manualNote, setManualNote] = useState("");
+  const [manualLink, setManualLink] = useState("");
+  const [manualUnits, setManualUnits] = useState("1");
 
   const allServices = useMemo(() => categories.flatMap((c) => c.services), [categories]);
 
@@ -129,12 +133,52 @@ export default function TrustClient({
 
   const manualOrderChargeCents = useMemo(() => {
     if (!manualModalService) return 0;
-    return flatUsdToCents(Number(manualModalService.priceUsd));
-  }, [manualModalService]);
+    const units = Math.floor(Number(manualUnits) || 0);
+    if (!Number.isFinite(units) || units <= 0) return 0;
+    return flatUsdToCents(Number(manualModalService.unitPriceUsd) * units);
+  }, [manualModalService, manualUnits]);
 
   const [bundleModal, setBundleModal] = useState<ClientOfferBundle | null>(null);
   const [bundleLinks, setBundleLinks] = useState<Record<string, string>>({});
   const [bundleOrderMessage, setBundleOrderMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const apiServiceId = searchParams.get("serviceId")?.trim() ?? "";
+    const manualServiceId = searchParams.get("manualServiceId")?.trim() ?? "";
+    const offerId = searchParams.get("offerId")?.trim() ?? "";
+
+    if (apiServiceId) {
+      setSelectedServiceId(apiServiceId);
+      requestAnimationFrame(() => {
+        document.getElementById("order-now")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
+    if (manualServiceId) {
+      const s = manualServices.find((x) => x.id === manualServiceId);
+      if (s) {
+        setManualLink("");
+        setManualUnits("1");
+        setManualModalService(s);
+        requestAnimationFrame(() => {
+          document.getElementById("manual-services")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+      return;
+    }
+
+    if (offerId) {
+      const b = clientBundles.find((x) => x.id === offerId);
+      if (b) {
+        setBundleModal(b);
+        requestAnimationFrame(() => {
+          document.getElementById("client-offers")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const [draftOrderNotesEn, setDraftOrderNotesEn] = useState(orderSectionNotes.en);
   const [draftOrderNotesAr, setDraftOrderNotesAr] = useState(orderSectionNotes.ar);
@@ -330,6 +374,51 @@ export default function TrustClient({
         </section>
       ) : null}
 
+      {topPicks.length ? (
+        <section className="border-b border-[#2C4E7A]/10 bg-white px-4 py-8 sm:px-5">
+          <div className="mx-auto w-full max-w-6xl">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight text-[#1F3A5F] sm:text-2xl">
+                  {t("topPicks.title")}
+                </h2>
+                <p className="mt-1 text-sm text-[#2C4E7A]/85">{t("topPicks.help")}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {topPicks.map((p) => {
+                const href =
+                  p.kind === "API"
+                    ? `/trust?serviceId=${encodeURIComponent(p.refId)}`
+                    : p.kind === "MANUAL"
+                      ? `/trust?manualServiceId=${encodeURIComponent(p.refId)}`
+                      : `/trust?offerId=${encodeURIComponent(p.refId)}`;
+                return (
+                  <Link
+                    key={p.id}
+                    href={href}
+                    className="group rounded-2xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4 shadow-sm outline-none ring-orange-500/15 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-4"
+                  >
+                    <div className="text-sm font-semibold text-[#1F3A5F]">{p.title}</div>
+                    <div className="mt-1 text-xs font-medium text-[#2C4E7A]/75">
+                      {p.kind === "API"
+                        ? t("order.sectionTitle")
+                        : p.kind === "MANUAL"
+                          ? t("manualServices.sectionTitle")
+                          : t("clientOffers.sectionTitle")}
+                    </div>
+                    <div className="mt-3 text-xs font-semibold text-[#1F3A5F] underline decoration-[#FF8C00]/50 underline-offset-4 transition group-hover:decoration-[#FF8C00]">
+                      {t("order.placeOrder")}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-5 sm:py-12">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -403,7 +492,64 @@ export default function TrustClient({
           </section>
         ) : null}
 
-        <div className="mt-6 grid gap-3 rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-5 shadow-sm sm:grid-cols-3">
+        {clientBundles.length > 0 ? (
+          <section
+            id="client-offers"
+            className="mt-6 scroll-mt-28 rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm sm:p-6"
+          >
+            <h2 className="text-xl font-bold tracking-tight text-[#1F3A5F] sm:text-2xl">
+              {t("clientOffers.sectionTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-[#2C4E7A]/85 sm:text-base">
+              {t("clientOffers.sectionHelp")}
+            </p>
+            {bundleOrderMessage ? (
+              <div className="mt-4 rounded-lg border border-[#2C4E7A]/15 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F]">
+                {bundleOrderMessage}
+              </div>
+            ) : null}
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {clientBundles.map((b) => (
+                <article
+                  key={b.id}
+                  className="flex flex-col rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-5"
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+                    {t("clientOffers.productLabel")}
+                  </div>
+                  <h3 className="mt-1 text-lg font-bold text-[#1F3A5F]">{b.name}</h3>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-[#2C4E7A]/90">
+                    {b.previewLine}
+                  </p>
+                  <div className="mt-2 text-xs font-medium text-[#2C4E7A]/75">
+                    {t("clientOffers.optionCount", { count: b.serviceCount })}
+                  </div>
+                  <div className="mt-3 text-sm font-semibold text-[#1F3A5F]">
+                    {t("clientOffers.finalPrice", { amount: formatUsdFromCents(b.offerPriceCents) })}
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => {
+                        setBundleOrderMessage(null);
+                        setBundleModal(b);
+                      }}
+                      className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
+                    >
+                      {t("clientOffers.openOffer")}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <div
+          id="order-now"
+          className="mt-6 scroll-mt-28 grid gap-3 rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-5 shadow-sm sm:grid-cols-3"
+        >
           <label className="block sm:col-span-1">
             <div className="text-sm font-semibold text-[#1F3A5F]">{t("order.service")}</div>
             <select
@@ -552,60 +698,6 @@ export default function TrustClient({
           </div>
         ) : null}
 
-        {clientBundles.length > 0 ? (
-          <section
-            id="client-offers"
-            className="mt-12 scroll-mt-28 rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm sm:p-6"
-          >
-            <h2 className="text-xl font-bold tracking-tight text-[#1F3A5F] sm:text-2xl">
-              {t("clientOffers.sectionTitle")}
-            </h2>
-            <p className="mt-2 text-sm text-[#2C4E7A]/85 sm:text-base">
-              {t("clientOffers.sectionHelp")}
-            </p>
-            {bundleOrderMessage ? (
-              <div className="mt-4 rounded-lg border border-[#2C4E7A]/15 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F]">
-                {bundleOrderMessage}
-              </div>
-            ) : null}
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {clientBundles.map((b) => (
-                <article
-                  key={b.id}
-                  className="flex flex-col rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-5"
-                >
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-                    {t("clientOffers.productLabel")}
-                  </div>
-                  <h3 className="mt-1 text-lg font-bold text-[#1F3A5F]">{b.name}</h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-[#2C4E7A]/90">
-                    {b.previewLine}
-                  </p>
-                  <div className="mt-2 text-xs font-medium text-[#2C4E7A]/75">
-                    {t("clientOffers.optionCount", { count: b.serviceCount })}
-                  </div>
-                  <div className="mt-3 text-sm font-semibold text-[#1F3A5F]">
-                    {t("clientOffers.finalPrice", { amount: formatUsdFromCents(b.offerPriceCents) })}
-                  </div>
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      disabled={pending}
-                      onClick={() => {
-                        setBundleOrderMessage(null);
-                        setBundleModal(b);
-                      }}
-                      className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
-                    >
-                      {t("clientOffers.openOffer")}
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         <section
           id="manual-services"
           className="mt-12 scroll-mt-28 rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm sm:p-6"
@@ -641,13 +733,16 @@ export default function TrustClient({
                     {s.description}
                   </p>
                   <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="text-lg font-bold text-[#1F3A5F]">${s.priceUsd}</span>
+                    <span className="text-lg font-bold text-[#1F3A5F]">
+                      ${s.unitPriceUsd} <span className="text-sm font-semibold text-[#2C4E7A]/70">/ unit</span>
+                    </span>
                     {isAuthenticated ? (
                       <button
                         type="button"
                         disabled={pending}
                         onClick={() => {
-                          setManualNote("");
+                          setManualLink("");
+                          setManualUnits("1");
                           setManualModalService(s);
                         }}
                         className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
@@ -799,7 +894,7 @@ export default function TrustClient({
               {t("manualServices.confirmTitle")}
             </h3>
             <p className="mt-1 text-sm text-[#2C4E7A]/90">
-              {manualModalService.name} — <strong>${manualModalService.priceUsd}</strong>
+              {manualModalService.name} — <strong>${manualModalService.unitPriceUsd} / unit</strong>
             </p>
             {isAuthenticated && walletBalanceCents !== null ? (
               <p className="mt-2 text-sm text-[#1F3A5F]">
@@ -820,17 +915,31 @@ export default function TrustClient({
                 </Link>
               </p>
             ) : null}
-            <label className="mt-4 block text-sm text-[#1F3A5F]">
-              {t("manualServices.noteLabel")}
-              <textarea
-                className="mt-1 w-full rounded-lg border border-[#2C4E7A]/20 px-3 py-2 text-sm"
-                rows={3}
-                value={manualNote}
-                onChange={(e) => setManualNote(e.target.value)}
-                placeholder={t("manualServices.notePlaceholder")}
-                maxLength={512}
-              />
-            </label>
+            <div className="mt-4 grid gap-3">
+              <label className="block text-sm font-semibold text-[#1F3A5F]">
+                {t("manualServices.manualUrl")}
+                <input
+                  className="mt-1 h-11 w-full rounded-lg border border-[#2C4E7A]/20 px-3 text-sm font-normal"
+                  value={manualLink}
+                  onChange={(e) => setManualLink(e.target.value)}
+                  placeholder="https://…"
+                  maxLength={2048}
+                />
+              </label>
+              <label className="block text-sm font-semibold text-[#1F3A5F]">
+                {t("manualServices.manualUnits")}
+                <input
+                  className="mt-1 h-11 w-full rounded-lg border border-[#2C4E7A]/20 px-3 text-sm font-normal"
+                  inputMode="numeric"
+                  value={manualUnits}
+                  onChange={(e) => setManualUnits(e.target.value)}
+                />
+              </label>
+              <div className="rounded-lg border border-[#2C4E7A]/12 bg-[#F5F7FA] px-3 py-2 text-sm text-[#1F3A5F]">
+                {t("manualServices.manualTotal")}:{" "}
+                <strong>{formatUsdFromCents(manualOrderChargeCents)} USD</strong>
+              </div>
+            </div>
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
@@ -842,13 +951,14 @@ export default function TrustClient({
               </button>
               <button
                 type="button"
-                disabled={pending || manualSubmitBlocked}
+                disabled={pending || manualSubmitBlocked || !manualLink.trim() || Math.floor(Number(manualUnits) || 0) <= 0}
                 className="rounded-lg bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 onClick={() => {
                   startTransition(async () => {
                     const res = await placeCustomServiceOrderAction({
                       serviceId: manualModalService.id,
-                      clientNote: manualNote,
+                      link: manualLink,
+                      units: Math.floor(Number(manualUnits) || 0),
                     });
                     if (!res.ok) {
                       setManualOrderMessage(res.message);

@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { getSmmAdvertisingBoardsForAdmin } from "@/lib/smm/advertising-board";
 import { Link } from "@/i18n/routing";
+import { getTranslations } from "next-intl/server";
 import SmmAdminClient from "./view";
 
 export default async function SmmAdminPage() {
   const { role } = await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
+  const t = await getTranslations("adminSmm.page");
 
   const cfg = await prisma.smmProviderConfig.findUnique({ where: { id: 1 } });
   const globalRule = await prisma.smmMarkupRule.findFirst({
@@ -24,7 +26,7 @@ export default async function SmmAdminPage() {
     orderBy: [{ sort: "asc" }, { providerName: "asc" }],
     include: {
       services: {
-        where: { isArchived: false },
+        where: { isArchived: false, enabledForClients: true },
         orderBy: [{ providerName: "asc" }],
       },
     },
@@ -52,20 +54,29 @@ export default async function SmmAdminPage() {
     .map((c) => `${c.id}:${c.updatedAt.toISOString()}:${c.items.map((it) => it.updatedAt.toISOString()).join(",")}`)
     .join("|");
 
+  const [manualServices, topPicks] = await Promise.all([
+    prisma.customService.findMany({
+      orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+      select: { id: true, name: true, enabled: true },
+    }),
+    prisma.smmTopServicePick.findMany({
+      orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
+    }),
+  ]);
+
   return (
     <main className="flex-1 bg-white px-4 py-12 md:py-16">
       <div className="mx-auto w-full max-w-6xl">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[#2C4E7A]/70">
-              Admin
+              {t("crumb")}
             </div>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#1F3A5F]">
-              SMM Growth
+              {t("title")}
             </h1>
             <p className="mt-2 max-w-2xl text-[#2C4E7A]/90">
-              Sync provider catalog, configure markup, and enable/disable services for clients and
-              resellers. Default is OFF.
+              {t("subtitle")}
             </p>
           </div>
 
@@ -74,19 +85,13 @@ export default async function SmmAdminPage() {
               href="/admin"
               className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
             >
-              Back to Admin
+              {t("backToAdmin")}
             </Link>
             <Link
               href="/trust"
               className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105"
             >
-              Open SMM Growth
-            </Link>
-            <Link
-              href="/admin/manual-services"
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
-            >
-              Manual services
+              {t("openSmmGrowth")}
             </Link>
           </div>
         </div>
@@ -98,6 +103,24 @@ export default async function SmmAdminPage() {
             advertisingBoards={{ en: adEn, ar: adAr }}
             isPlatformAdmin={role === "PLATFORM_ADMIN"}
             catalogVersion={catalogVersion}
+            topPicks={topPicks.map((p) => ({
+              id: p.id,
+              kind: p.kind,
+              refId: p.refId,
+              enabled: p.enabled,
+              sort: p.sort,
+              updatedAt: p.updatedAt.toISOString(),
+            }))}
+            topPickOptions={{
+              apiServices: categories.flatMap((c) =>
+                c.services.map((s) => ({
+                  id: s.id,
+                  name: s.clientTitle?.trim() || s.providerName,
+                })),
+              ),
+              manualServices: manualServices.map((s) => ({ id: s.id, name: s.name, enabled: s.enabled })),
+              offers: clientCategories.map((c) => ({ id: c.id, nameEn: c.nameEn, nameAr: c.nameAr, enabled: c.enabled })),
+            }}
             defaults={{
               baseUrl: cfg?.baseUrl ?? process.env.SMM_PROVIDER_BASE_URL ?? "https://smmturk.org",
               globalMarkupPercent: Number(globalRule?.value ?? 0),

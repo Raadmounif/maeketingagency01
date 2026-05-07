@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { createPaymentRequestAction } from "./actions";
+import { useDashboardUrlHash } from "./use-dashboard-url-hash";
 
 type Method = {
   id: string;
@@ -47,7 +49,10 @@ type ManualOrderRow = {
   id: string;
   createdAt: string;
   serviceName: string;
-  priceUsd: string;
+  link: string;
+  units: number;
+  unitPriceUsd: string;
+  totalUsd: string;
   status: "ORDERED" | "DONE";
   clientNote: string | null;
 };
@@ -75,6 +80,7 @@ export default function DashboardClient(props: {
     manual: ManualOrderRow[];
   };
 }) {
+  const t = useTranslations("dashboardPage");
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<string | null>(null);
 
@@ -82,6 +88,15 @@ export default function DashboardClient(props: {
   const [amountUsd, setAmountUsd] = useState("");
   const [clientNote, setClientNote] = useState("");
   const [proofUrl, setProofUrl] = useState("");
+
+  const { hashId: urlHashId, hashNonce: urlHashNonce } = useDashboardUrlHash();
+
+  useEffect(() => {
+    if (urlHashId !== "dash-overview") return;
+    queueMicrotask(() => {
+      document.getElementById("dash-overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [urlHashId]);
 
   const sortedPayments = useMemo(() => props.payments, [props.payments]);
   const ordered = useMemo(() => {
@@ -98,9 +113,11 @@ export default function DashboardClient(props: {
 
   return (
     <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-8 shadow-sm">
-      <h1 className="text-2xl font-bold tracking-tight text-[#1F3A5F]">Dashboard</h1>
+      <div id="dash-overview" className="scroll-mt-[5.75rem]">
+        <h1 className="text-2xl font-bold tracking-tight text-[#1F3A5F]">{t("title")}</h1>
+      </div>
       <div className="mt-2 text-[#2C4E7A]/90">
-        Wallet balance:{" "}
+        {t("walletBalance")}{" "}
         <span className="font-semibold text-[#1F3A5F]">${formatUsd(props.walletBalanceCents)}</span>
       </div>
 
@@ -110,7 +127,13 @@ export default function DashboardClient(props: {
         </div>
       ) : null}
 
-      <CollapsibleSection id="dash-add-funds" title="Add funds" className="mt-8">
+      <CollapsibleSection
+        id="dash-add-funds"
+        title={t("addFunds")}
+        className="mt-8"
+        urlHashId={urlHashId}
+        urlHashNonce={urlHashNonce}
+      >
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
           Create a payment request. Status will be <strong>Pending</strong> until an admin approves. You must include
           proof of payment: a screenshot URL and/or a short written description of your transfer (at least 3
@@ -129,7 +152,7 @@ export default function DashboardClient(props: {
                 clientNote,
                 proofUrl,
               });
-              setStatus(res.ok ? "Payment request created." : ("message" in res ? res.message : "Request failed."));
+              setStatus(res.ok ? t("paymentCreated") : ("message" in res ? res.message : t("requestFailed")));
               if (res.ok) {
                 setAmountUsd("");
                 setClientNote("");
@@ -205,13 +228,19 @@ export default function DashboardClient(props: {
               disabled={pending || !props.methods.length}
               className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-6 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
             >
-              {pending ? "Submitting…" : "Submit request"}
+              {pending ? t("submitting") : t("submitRequest")}
             </button>
           </div>
         </form>
       </CollapsibleSection>
 
-      <CollapsibleSection id="dash-payments" title="My payments" className="mt-8">
+      <CollapsibleSection
+        id="dash-payments"
+        title={t("myPayments")}
+        className="mt-8"
+        urlHashId={urlHashId}
+        urlHashNonce={urlHashNonce}
+      >
         <div className="mt-3 overflow-x-auto rounded-lg border border-[#2C4E7A]/12">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
@@ -267,7 +296,13 @@ export default function DashboardClient(props: {
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection id="dash-orders" title="Ordered services" className="mt-8">
+      <CollapsibleSection
+        id="dash-orders"
+        title={t("orderedServices")}
+        className="mt-8"
+        urlHashId={urlHashId}
+        urlHashNonce={urlHashNonce}
+      >
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
           API service status updates automatically from the provider. Manual service status is updated by an admin.
         </p>
@@ -314,6 +349,12 @@ export default function DashboardClient(props: {
                         </div>
                       ) : (
                         <div className="space-y-0.5">
+                          <div className="max-w-[420px] truncate" title={o.link}>
+                            {o.link}
+                          </div>
+                          <div className="text-xs text-[#2C4E7A]/75">
+                            Units: {o.units} · Unit: ${o.unitPriceUsd}
+                          </div>
                           <div className="text-xs text-[#2C4E7A]/75">
                             Note: {o.clientNote?.trim() ? o.clientNote : "—"}
                           </div>
@@ -321,7 +362,7 @@ export default function DashboardClient(props: {
                       )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">
-                      {o.kind === "API" ? `$${formatUsd(o.chargeCents)}` : `$${o.priceUsd}`}
+                      {o.kind === "API" ? `$${formatUsd(o.chargeCents)}` : `$${o.totalUsd}`}
                     </td>
                     <td className="px-3 py-2">
                       <span

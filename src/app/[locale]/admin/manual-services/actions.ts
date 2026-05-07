@@ -20,20 +20,20 @@ function parsePriceUsd(raw: unknown): { ok: true; value: Prisma.Decimal } | { ok
 export async function createCustomServiceAction(input: {
   name: string;
   description: string;
-  priceUsd: string | number;
+  unitPriceUsd: string | number;
 }) {
   await requireManualServicesAdmin();
   const name = String(input.name ?? "").trim();
   const description = String(input.description ?? "").trim();
   if (!name) return { ok: false as const, message: "Name is required." };
-  const price = parsePriceUsd(input.priceUsd);
+  const price = parsePriceUsd(input.unitPriceUsd);
   if (!price.ok) return { ok: false as const, message: price.message };
 
   await prisma.customService.create({
     data: {
       name: name.slice(0, 255),
       description,
-      priceUsd: price.value,
+      unitPriceUsd: price.value,
     },
   });
   revalidatePath("/admin/manual-services");
@@ -45,7 +45,7 @@ export async function updateCustomServiceAction(input: {
   id: string;
   name?: string;
   description?: string;
-  priceUsd?: string | number;
+  unitPriceUsd?: string | number;
   enabled?: boolean;
   sort?: number;
 }) {
@@ -62,10 +62,10 @@ export async function updateCustomServiceAction(input: {
   if (input.description !== undefined) {
     data.description = String(input.description).trim();
   }
-  if (input.priceUsd !== undefined) {
-    const price = parsePriceUsd(input.priceUsd);
+  if (input.unitPriceUsd !== undefined) {
+    const price = parsePriceUsd(input.unitPriceUsd);
     if (!price.ok) return { ok: false as const, message: price.message };
-    data.priceUsd = price.value;
+    data.unitPriceUsd = price.value;
   }
   if (input.enabled !== undefined) data.enabled = Boolean(input.enabled);
   if (input.sort !== undefined) data.sort = Math.floor(Number(input.sort)) || 0;

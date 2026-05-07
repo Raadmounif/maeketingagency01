@@ -1,5 +1,6 @@
 import { Link } from "@/i18n/routing";
 import { getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { getMarketingContent, getSocialLinks } from "@/lib/site-settings";
 import {
   IconFacebook,
@@ -9,17 +10,18 @@ import {
   IconYouTube,
 } from "@/components/social/SocialIcons";
 
-const nav = [
-  { href: "/#services", label: "Services" },
-  { href: "/#about", label: "About" },
-  { href: "/services", label: "Service directory" },
-  { href: "/trust", label: "SMM Growth" },
-];
-
 export async function SiteFooter() {
   const locale = (await getLocale()) as "en" | "ar";
+  const navT = await getTranslations("nav");
+  const footT = await getTranslations("marketing.footer");
   const mc = await getMarketingContent(locale);
   const social = await getSocialLinks();
+  const nav = [
+    { href: "/#services", label: navT("services") },
+    { href: "/#about", label: navT("about") },
+    { href: "/services", label: footT("serviceDirectory") },
+    { href: "/trust", label: navT("trustGrowth") },
+  ];
   type Item = {
     href: string;
     label: string;
@@ -64,7 +66,7 @@ export async function SiteFooter() {
 
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-white/50">
-            Navigate
+            {footT("navigate")}
           </div>
           <ul className="mt-3 space-y-0.5 sm:mt-4">
             {nav.map((item) => (
@@ -103,7 +105,7 @@ export async function SiteFooter() {
       </div>
 
       <div className="mx-auto mt-8 max-w-6xl border-t border-white/10 px-4 pt-6 text-xs text-white/55 sm:mt-12 sm:pt-8">
-        © {new Date().getFullYear()} PalmyraShift. All rights reserved.
+        © {new Date().getFullYear()} PalmyraShift. {footT("rights")}
       </div>
     </footer>
   );

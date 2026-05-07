@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { Link } from "@/i18n/routing";
 import {
   creditUserWalletAction,
   createSmmClientCategoryAction,
@@ -12,6 +14,10 @@ import {
   removeServiceFromSmmClientCategoryAction,
   syncSmmCatalogAction,
   updateSmmAdvertisingBoardAction,
+  uploadSmmAdvertisingBoardPhotoAction,
+  addSmmTopPickAction,
+  deleteSmmTopPickAction,
+  updateSmmTopPickAction,
   updateSmmClientCategoryAction,
   updateSmmProviderSettingsAction,
   updateSmmServiceClientCopyAction,
@@ -75,25 +81,16 @@ type AdvertisingBoardPayload = {
 };
 
 type AdvertisingBoardForm = {
-  enabled: boolean;
   title: string;
   body: string;
-  linkUrl: string;
   mediaUrl: string;
-  mediaKind: "auto" | "image" | "video";
 };
 
 function boardToForm(p: AdvertisingBoardPayload): AdvertisingBoardForm {
-  const k = p.mediaKind;
-  const mediaKind: "auto" | "image" | "video" =
-    k === "image" || k === "video" ? k : "auto";
   return {
-    enabled: p.enabled,
     title: p.title,
     body: p.body,
-    linkUrl: p.linkUrl ?? "",
     mediaUrl: p.mediaUrl ?? "",
-    mediaKind,
   };
 }
 
@@ -120,6 +117,7 @@ function ClientCategoriesManager({
   onMessage: (msg: string | null) => void;
   refresh: () => void;
 }) {
+  const t = useTranslations("adminSmm");
   const [uiPending, startTransition] = useTransition();
   const busy = pending || uiPending;
 
@@ -153,7 +151,7 @@ function ClientCategoriesManager({
         enabled: createEnabled,
         sort: Number(createSort),
       });
-      onMessage(res.ok ? "Created client category." : res.message);
+      onMessage(res.ok ? t("status.createdClientCategory") : res.message);
       if (res.ok) {
         setCreateNameEn("");
         setCreateNameAr("");
@@ -176,7 +174,7 @@ function ClientCategoriesManager({
         enabled: c.enabled,
         sort: Number(c.sort),
       });
-      onMessage(res.ok ? "Saved category." : res.message);
+      onMessage(res.ok ? t("status.savedCategory") : res.message);
       refresh();
     });
   }
@@ -185,7 +183,7 @@ function ClientCategoriesManager({
     onMessage(null);
     startTransition(async () => {
       const res = await deleteSmmClientCategoryAction({ id });
-      onMessage(res.ok ? "Deleted category." : res.message);
+      onMessage(res.ok ? t("status.deletedCategory") : res.message);
       refresh();
     });
   }
@@ -200,7 +198,7 @@ function ClientCategoriesManager({
         offerQuantity: Number(addOfferQuantity),
         sort: Number(addSort),
       });
-      onMessage(res.ok ? "Added service to client category." : res.message);
+      onMessage(res.ok ? t("status.addedServiceToCategory") : res.message);
       if (res.ok) {
         setAddServiceId("");
         setAddMarkupPct("0");
@@ -215,7 +213,7 @@ function ClientCategoriesManager({
     onMessage(null);
     startTransition(async () => {
       const res = await removeServiceFromSmmClientCategoryAction({ itemId });
-      onMessage(res.ok ? "Removed service from category." : res.message);
+      onMessage(res.ok ? t("status.removedServiceFromCategory") : res.message);
       refresh();
     });
   }
@@ -488,16 +486,53 @@ function ClientCategoriesManager({
 
 function SmmAdvertisingBoardsForm({
   boards,
+  topPicks,
+  options,
   onMessage,
   refresh,
 }: {
   boards: { en: AdvertisingBoardPayload; ar: AdvertisingBoardPayload };
+  topPicks: Array<{
+    id: string;
+    kind: "API" | "MANUAL" | "OFFER";
+    refId: string;
+    enabled: boolean;
+    sort: number;
+    updatedAt: string;
+  }>;
+  options: {
+    apiServices: Array<{ id: string; name: string }>;
+    manualServices: Array<{ id: string; name: string; enabled: boolean }>;
+    offers: Array<{ id: string; nameEn: string; nameAr: string; enabled: boolean }>;
+  };
   onMessage: (msg: string | null) => void;
   refresh: () => void;
 }) {
+  const t = useTranslations("adminSmm");
+  const locale = useLocale();
   const [adPending, startAdTransition] = useTransition();
+  const [uploading, startUploadTransition] = useTransition();
   const [adEn, setAdEn] = useState(() => boardToForm(boards.en));
   const [adAr, setAdAr] = useState(() => boardToForm(boards.ar));
+  const [pickKind, setPickKind] = useState<"API" | "MANUAL" | "OFFER">("API");
+  const [pickRefId, setPickRefId] = useState("");
+  const [pickSort, setPickSort] = useState("0");
+
+  function uploadPhoto(locale: "en" | "ar", file: File) {
+    startUploadTransition(async () => {
+      onMessage(null);
+      const fd = new FormData();
+      fd.set("locale", locale);
+      fd.set("file", file);
+      const res = await uploadSmmAdvertisingBoardPhotoAction(fd);
+      if (!res.ok) {
+        onMessage(res.message);
+        return;
+      }
+      if (locale === "en") setAdEn((p) => ({ ...p, mediaUrl: res.url }));
+      else setAdAr((p) => ({ ...p, mediaUrl: res.url }));
+    });
+  }
 
   function saveAdvertisingBoard(locale: "en" | "ar") {
     const b = locale === "en" ? adEn : adAr;
@@ -505,42 +540,56 @@ function SmmAdvertisingBoardsForm({
     startAdTransition(async () => {
       const res = await updateSmmAdvertisingBoardAction({
         locale,
-        enabled: b.enabled,
+        enabled: Boolean(b.title.trim() || b.body.trim() || b.mediaUrl.trim()),
         title: b.title,
         body: b.body,
-        linkUrl: b.linkUrl.trim() ? b.linkUrl.trim() : null,
+        linkUrl: null,
         mediaUrl: b.mediaUrl.trim() ? b.mediaUrl.trim() : null,
-        mediaKind: b.mediaKind,
+        mediaKind: b.mediaUrl.trim() ? "image" : null,
       });
       onMessage(
-        res.ok ? `Saved ${locale === "en" ? "English" : "Arabic"} advertising board.` : res.message,
+        res.ok
+          ? t("ads.savedBoard", { lang: locale === "en" ? t("ads.langEn") : t("ads.langAr") })
+          : res.message,
       );
       refresh();
     });
   }
 
+  function PreviewCard(props: { title: string; body: string; mediaUrl: string }) {
+    const bg = props.mediaUrl.trim();
+    return (
+      <div
+        className="overflow-hidden rounded-xl border border-[#2C4E7A]/12 bg-white shadow-sm"
+        style={bg ? { backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      >
+        <div className={["p-4", bg ? "bg-gradient-to-b from-black/55 via-black/35 to-black/60 text-white" : ""].join(" ")}>
+          <div className={["text-base font-bold", bg ? "text-white" : "text-[#1F3A5F]"].join(" ")}>
+            {props.title.trim() || "—"}
+          </div>
+          <div className={["mt-2 whitespace-pre-wrap text-sm", bg ? "text-white/90" : "text-[#2C4E7A]/90"].join(" ")}>
+            {props.body.trim() || ""}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <div className="text-sm font-semibold text-[#1F3A5F]">SMM Growth page — advertising board</div>
+      <div className="text-sm font-semibold text-[#1F3A5F]">{t("ads.sectionTitle")}</div>
       <p className="mt-2 text-xs text-[#2C4E7A]/80">
-        Shown on the public <span className="font-semibold">/trust</span> page for the matching site language when
-        enabled. Platform admins and SMM Growth admins can edit both languages. Media: HTTPS image, GIF, .mp4/.webm,
-        or YouTube/Vimeo links.
+        {t("ads.sectionHelpPrefix")} <span className="font-semibold">/trust</span>{" "}
+        {t("ads.sectionHelpSuffix")}
       </p>
 
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/75">English (en)</div>
-          <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A5F]">
-            <input
-              type="checkbox"
-              checked={adEn.enabled}
-              onChange={(e) => setAdEn((p) => ({ ...p, enabled: e.target.checked }))}
-            />
-            Enabled
-          </label>
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/75">
+            {t("ads.langEn")}
+          </div>
           <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Title</div>
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.title")}</div>
             <input
               value={adEn.title}
               onChange={(e) => setAdEn((p) => ({ ...p, title: e.target.value }))}
@@ -548,7 +597,7 @@ function SmmAdvertisingBoardsForm({
             />
           </label>
           <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Body</div>
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.body")}</div>
             <textarea
               value={adEn.body}
               onChange={(e) => setAdEn((p) => ({ ...p, body: e.target.value }))}
@@ -556,63 +605,50 @@ function SmmAdvertisingBoardsForm({
               className="mt-2 w-full resize-y rounded-xl border border-[#2C4E7A]/20 bg-white px-3 py-2 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
             />
           </label>
-          <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Link (optional)</div>
-            <input
-              value={adEn.linkUrl}
-              onChange={(e) => setAdEn((p) => ({ ...p, linkUrl: e.target.value }))}
-              placeholder="https://…"
-              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
-            />
-          </label>
-          <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Media URL (optional)</div>
-            <input
-              value={adEn.mediaUrl}
-              onChange={(e) => setAdEn((p) => ({ ...p, mediaUrl: e.target.value }))}
-              placeholder="https://…"
-              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
-            />
-          </label>
-          <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Media mode</div>
-            <select
-              value={adEn.mediaKind}
-              onChange={(e) =>
-                setAdEn((p) => ({
-                  ...p,
-                  mediaKind: e.target.value as "auto" | "image" | "video",
-                }))
-              }
-              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-            >
-              <option value="auto">Auto</option>
-              <option value="image">Image / GIF</option>
-              <option value="video">Video / embed</option>
-            </select>
-          </label>
+          <div className="mt-4 grid gap-3">
+            <label className="block">
+              <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.uploadPhoto")}</div>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                className="mt-2 block w-full text-sm text-[#1F3A5F]"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  uploadPhoto("en", f);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+            {adEn.mediaUrl.trim() ? (
+              <button
+                type="button"
+                disabled={uploading}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                onClick={() => setAdEn((p) => ({ ...p, mediaUrl: "" }))}
+              >
+                {t("ads.removePhoto")}
+              </button>
+            ) : null}
+            <PreviewCard title={adEn.title} body={adEn.body} mediaUrl={adEn.mediaUrl} />
+          </div>
           <button
             type="button"
             disabled={adPending}
             onClick={() => saveAdvertisingBoard("en")}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-xs font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
           >
-            Save English board
+            {uploading ? t("ads.uploading") : t("ads.saveEn")}
           </button>
         </div>
 
         <div className="rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/75">Arabic (ar)</div>
-          <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#1F3A5F]">
-            <input
-              type="checkbox"
-              checked={adAr.enabled}
-              onChange={(e) => setAdAr((p) => ({ ...p, enabled: e.target.checked }))}
-            />
-            Enabled
-          </label>
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/75">
+            {t("ads.langAr")}
+          </div>
           <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Title</div>
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.title")}</div>
             <input
               value={adAr.title}
               onChange={(e) => setAdAr((p) => ({ ...p, title: e.target.value }))}
@@ -620,7 +656,7 @@ function SmmAdvertisingBoardsForm({
             />
           </label>
           <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Body</div>
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.body")}</div>
             <textarea
               value={adAr.body}
               onChange={(e) => setAdAr((p) => ({ ...p, body: e.target.value }))}
@@ -628,49 +664,208 @@ function SmmAdvertisingBoardsForm({
               className="mt-2 w-full resize-y rounded-xl border border-[#2C4E7A]/20 bg-white px-3 py-2 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
             />
           </label>
-          <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Link (optional)</div>
-            <input
-              value={adAr.linkUrl}
-              onChange={(e) => setAdAr((p) => ({ ...p, linkUrl: e.target.value }))}
-              placeholder="https://…"
-              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
-            />
-          </label>
-          <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Media URL (optional)</div>
-            <input
-              value={adAr.mediaUrl}
-              onChange={(e) => setAdAr((p) => ({ ...p, mediaUrl: e.target.value }))}
-              placeholder="https://…"
-              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
-            />
-          </label>
-          <label className="mt-3 block">
-            <div className="text-xs font-semibold text-[#1F3A5F]">Media mode</div>
-            <select
-              value={adAr.mediaKind}
-              onChange={(e) =>
-                setAdAr((p) => ({
-                  ...p,
-                  mediaKind: e.target.value as "auto" | "image" | "video",
-                }))
-              }
-              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-            >
-              <option value="auto">Auto</option>
-              <option value="image">Image / GIF</option>
-              <option value="video">Video / embed</option>
-            </select>
-          </label>
+          <div className="mt-4 grid gap-3">
+            <label className="block">
+              <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.uploadPhoto")}</div>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                className="mt-2 block w-full text-sm text-[#1F3A5F]"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  uploadPhoto("ar", f);
+                  e.currentTarget.value = "";
+                }}
+              />
+            </label>
+            {adAr.mediaUrl.trim() ? (
+              <button
+                type="button"
+                disabled={uploading}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                onClick={() => setAdAr((p) => ({ ...p, mediaUrl: "" }))}
+              >
+                {t("ads.removePhoto")}
+              </button>
+            ) : null}
+            <PreviewCard title={adAr.title} body={adAr.body} mediaUrl={adAr.mediaUrl} />
+          </div>
           <button
             type="button"
             disabled={adPending}
             onClick={() => saveAdvertisingBoard("ar")}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-xs font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
           >
-            Save Arabic board
+            {uploading ? t("ads.uploading") : t("ads.saveAr")}
           </button>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4">
+        <div className="text-sm font-semibold text-[#1F3A5F]">{t("ads.topServicesTitle")}</div>
+        <p className="mt-1 text-xs text-[#2C4E7A]/80">{t("ads.topServicesHelp")}</p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <label className="block">
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.pickType")}</div>
+            <select
+              value={pickKind}
+              onChange={(e) => {
+                const v = e.target.value === "MANUAL" ? "MANUAL" : e.target.value === "OFFER" ? "OFFER" : "API";
+                setPickKind(v);
+                setPickRefId("");
+              }}
+              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+            >
+              <option value="API">{t("ads.pickApi")}</option>
+              <option value="MANUAL">{t("ads.pickManual")}</option>
+              <option value="OFFER">{t("ads.pickOffer")}</option>
+            </select>
+          </label>
+
+          <label className="block md:col-span-2">
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.pickItem")}</div>
+            <select
+              value={pickRefId}
+              onChange={(e) => setPickRefId(e.target.value)}
+              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+            >
+              <option value="">{t("ads.pickItem")}</option>
+              {pickKind === "API"
+                ? options.apiServices.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))
+                : pickKind === "MANUAL"
+                  ? options.manualServices.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                        {s.enabled ? "" : " (disabled)"}
+                      </option>
+                    ))
+                  : options.offers.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {locale === "ar" ? o.nameAr : o.nameEn}
+                        {o.enabled ? "" : " (disabled)"}
+                      </option>
+                    ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <div className="text-xs font-semibold text-[#1F3A5F]">{t("ads.pickSort")}</div>
+            <input
+              value={pickSort}
+              onChange={(e) => setPickSort(e.target.value)}
+              inputMode="numeric"
+              className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F]"
+            />
+          </label>
+        </div>
+
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            disabled={adPending || !pickRefId}
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-[#1F3A5F] px-4 text-xs font-semibold text-white disabled:opacity-60"
+            onClick={() => {
+              onMessage(null);
+              startAdTransition(async () => {
+                const res = await addSmmTopPickAction({
+                  kind: pickKind,
+                  refId: pickRefId,
+                  sort: Number(pickSort) || 0,
+                  enabled: true,
+                });
+                onMessage(res.ok ? null : res.message);
+                if (res.ok) {
+                  setPickRefId("");
+                  refresh();
+                }
+              });
+            }}
+          >
+            {t("ads.addPick")}
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-2">
+          {topPicks.length === 0 ? (
+            <div className="rounded-xl border border-[#2C4E7A]/10 bg-white px-4 py-3 text-sm text-[#2C4E7A]/80">
+              {t("ads.noPicks")}
+            </div>
+          ) : (
+            topPicks.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-col gap-3 rounded-xl border border-[#2C4E7A]/10 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[#1F3A5F]">
+                    {p.kind === "API"
+                      ? t("ads.pickApi")
+                      : p.kind === "MANUAL"
+                        ? t("ads.pickManual")
+                        : t("ads.pickOffer")}{" "}
+                    <span className="text-xs font-medium text-[#2C4E7A]/70">({p.refId})</span>
+                  </div>
+                  <div className="mt-1 text-xs text-[#2C4E7A]/75">
+                    {t("ads.pickSort")}: {p.sort} · {p.enabled ? t("ads.pickEnabled") : t("ads.pickHidden")}
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#1F3A5F]">
+                    {t("ads.pickSort")}
+                    <input
+                      defaultValue={String(p.sort)}
+                      inputMode="numeric"
+                      className="h-9 w-20 rounded-lg border border-[#2C4E7A]/20 px-2 text-xs"
+                      onBlur={(e) => {
+                        const next = Number(e.currentTarget.value) || 0;
+                        if (next === p.sort) return;
+                        startAdTransition(async () => {
+                          await updateSmmTopPickAction({ id: p.id, sort: next });
+                          refresh();
+                        });
+                      }}
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-[#1F3A5F]">
+                    <input
+                      type="checkbox"
+                      defaultChecked={p.enabled}
+                      onChange={(e) => {
+                        startAdTransition(async () => {
+                          await updateSmmTopPickAction({ id: p.id, enabled: e.currentTarget.checked });
+                          refresh();
+                        });
+                      }}
+                    />
+                    {p.enabled ? t("ads.pickEnabled") : t("ads.pickHidden")}
+                  </label>
+                  <button
+                    type="button"
+                    disabled={adPending}
+                    className="inline-flex h-9 items-center justify-center rounded-lg border border-[#2C4E7A]/20 bg-white px-3 text-xs font-semibold text-[#1F3A5F] transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                    onClick={() => {
+                      onMessage(null);
+                      startAdTransition(async () => {
+                        const res = await deleteSmmTopPickAction({ id: p.id });
+                        onMessage(res.ok ? null : res.message);
+                        refresh();
+                      });
+                    }}
+                  >
+                    {t("ads.deletePick")}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -684,6 +879,8 @@ export default function SmmAdminClient({
   advertisingBoards,
   adBoardVersionKey,
   clientCategoriesVersionKey,
+  topPicks,
+  topPickOptions,
 }: {
   defaults: Defaults;
   isPlatformAdmin: boolean;
@@ -691,7 +888,22 @@ export default function SmmAdminClient({
   advertisingBoards: { en: AdvertisingBoardPayload; ar: AdvertisingBoardPayload };
   adBoardVersionKey: string;
   clientCategoriesVersionKey: string;
+  topPicks: Array<{
+    id: string;
+    kind: "API" | "MANUAL" | "OFFER";
+    refId: string;
+    enabled: boolean;
+    sort: number;
+    updatedAt: string;
+  }>;
+  topPickOptions: {
+    apiServices: Array<{ id: string; name: string }>;
+    manualServices: Array<{ id: string; name: string; enabled: boolean }>;
+    offers: Array<{ id: string; nameEn: string; nameAr: string; enabled: boolean }>;
+  };
 }) {
+  const t = useTranslations("adminSmm");
+  const locale = useLocale();
   const router = useRouter();
   const [pending, startUiTransition] = useTransition();
   const [status, setStatus] = useState<string | null>(null);
@@ -783,7 +995,7 @@ export default function SmmAdminClient({
         globalMarkupPercent: Number(globalMarkupPercent),
         resellerMinMarginPct: Number(resellerMinMarginPct),
       });
-      setStatus(res.ok ? "Saved provider settings." : res.message);
+      setStatus(res.ok ? t("status.savedProviderSettings") : res.message);
       refresh();
     });
   }
@@ -792,7 +1004,11 @@ export default function SmmAdminClient({
     setStatus(null);
     startUiTransition(async () => {
       const res = await syncSmmCatalogAction();
-      setStatus(res.ok ? `Synced. Imported ${res.imported} services.` : "Sync failed.");
+      setStatus(
+        res.ok
+          ? t("status.syncedImported", { count: res.imported })
+          : t("status.syncFailed"),
+      );
       refresh();
     });
   }
@@ -819,7 +1035,7 @@ export default function SmmAdminClient({
             : { id, enabledForResellers: value },
         ),
       });
-      setStatus("Updated visibility.");
+      setStatus(t("status.updatedVisibility"));
       refresh();
     });
   }
@@ -834,7 +1050,7 @@ export default function SmmAdminClient({
         clientTitle: row.t,
         clientDescription: row.d,
       });
-      setStatus(res.ok ? "Saved client-facing copy." : res.message);
+      setStatus(res.ok ? t("status.savedClientCopy") : res.message);
       if (res.ok) refresh();
     });
   }
@@ -847,7 +1063,7 @@ export default function SmmAdminClient({
         categoryId,
         percentText: markupDraft[serviceId] ?? "",
       });
-      setStatus(res.ok ? "Saved API markup for service." : res.message);
+      setStatus(res.ok ? t("status.savedApiMarkup") : res.message);
       if (res.ok) refresh();
     });
   }
@@ -887,7 +1103,7 @@ export default function SmmAdminClient({
         return;
       }
       setIssuedKey(res.apiKey);
-      setStatus("Issued reseller API key (shown once).");
+      setStatus(t("status.issuedResellerKey"));
       refresh();
     });
   }
@@ -899,133 +1115,56 @@ export default function SmmAdminClient({
         email: creditEmail,
         amountUsd: Number(creditAmount),
       });
-      setStatus(res.ok ? "Credited wallet." : res.message);
+      setStatus(res.ok ? t("status.creditedWallet") : res.message);
       refresh();
     });
   }
 
   return (
     <div className="space-y-8">
-      <CollapsibleSection id="admin-smm-ads" title="SMM Growth — advertising board">
+      <CollapsibleSection id="admin-smm-ads" title={t("sections.ads")}>
         <SmmAdvertisingBoardsForm
           key={adBoardVersionKey}
           boards={advertisingBoards}
+          topPicks={topPicks}
+          options={topPickOptions}
           onMessage={setStatus}
           refresh={refresh}
         />
       </CollapsibleSection>
 
-      <CollapsibleSection id="admin-smm-offers" title="Featured offers & client categories">
-        <ClientCategoriesManager
-          key={clientCategoriesVersionKey}
-          allServices={allServicesFlat}
-          categories={clientCategories}
-          pending={pending}
-          onMessage={setStatus}
-          refresh={refresh}
-        />
+      <CollapsibleSection id="admin-smm-manual" title={t("sections.manual")}>
+        <p className="mt-2 text-sm text-[#2C4E7A]/85">
+          {t("manual.help")}
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/admin/manual-services"
+            className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
+          >
+            {t("manual.open")}
+          </Link>
+        </div>
       </CollapsibleSection>
 
-      {isPlatformAdmin ? (
-        <CollapsibleSection id="admin-smm-reseller" title="Reseller API & wallet credit">
-          <div className="text-sm font-semibold text-[#1F3A5F]">Reseller API</div>
-          <p className="mt-2 text-xs text-[#2C4E7A]/80">
-            Endpoint: <span className="font-mono">POST /api/reseller/v2</span> (same-origin). Body can be JSON or
-            form fields. Supported actions: <span className="font-mono">services</span>,{" "}
-            <span className="font-mono">add</span>, <span className="font-mono">status</span>,{" "}
-            <span className="font-mono">balance</span>.
-          </p>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <label className="block md:col-span-1">
-              <div className="text-sm font-semibold text-[#1F3A5F]">User email</div>
-              <input
-                value={resellerEmail}
-                onChange={(e) => setResellerEmail(e.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-                placeholder="reseller@example.com"
-              />
-            </label>
-            <label className="block md:col-span-1">
-              <div className="text-sm font-semibold text-[#1F3A5F]">Reseller discount (%)</div>
-              <input
-                value={resellerDiscount}
-                onChange={(e) => setResellerDiscount(e.target.value)}
-                inputMode="numeric"
-                className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-              />
-            </label>
-            <div className="flex items-end">
-              <button
-                type="button"
-                disabled={pending || !resellerEmail}
-                onClick={issueResellerKey}
-                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
-              >
-                Issue / rotate API key
-              </button>
-            </div>
-          </div>
-
-          {issuedKey ? (
-            <div className="mt-4 rounded-xl border border-[#2C4E7A]/15 bg-[#F5F7FA] p-4 text-xs text-[#1F3A5F]">
-              <div className="font-semibold">API key (copy now)</div>
-              <div className="mt-2 break-all font-mono">{issuedKey}</div>
-            </div>
-          ) : null}
-
-          <div className="mt-8 border-t border-[#2C4E7A]/10 pt-6">
-            <div className="text-sm font-semibold text-[#1F3A5F]">Wallet credit</div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <label className="block">
-                <div className="text-sm font-semibold text-[#1F3A5F]">User email</div>
-                <input
-                  value={creditEmail}
-                  onChange={(e) => setCreditEmail(e.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-                />
-              </label>
-              <label className="block">
-                <div className="text-sm font-semibold text-[#1F3A5F]">Amount (USD)</div>
-                <input
-                  value={creditAmount}
-                  onChange={(e) => setCreditAmount(e.target.value)}
-                  inputMode="decimal"
-                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-                />
-              </label>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  disabled={pending || !creditEmail}
-                  onClick={creditWallet}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
-                >
-                  Credit wallet
-                </button>
-              </div>
-            </div>
-          </div>
-        </CollapsibleSection>
-      ) : null}
-
-      <CollapsibleSection id="admin-smm-provider" title="Provider & pricing">
+      <CollapsibleSection id="admin-smm-provider" title={t("sections.provider")}>
       <div className="grid gap-4 md:grid-cols-3">
         <label className="block">
-          <div className="text-sm font-semibold text-[#1F3A5F]">Provider base URL</div>
+          <div className="text-sm font-semibold text-[#1F3A5F]">{t("provider.baseUrl")}</div>
           <input
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder="https://smmturk.org"
+            placeholder={t("provider.baseUrlPlaceholder")}
             className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4"
           />
           <div className="mt-2 text-xs text-[#2C4E7A]/75">
-            API key is read from server env <span className="font-mono">SMM_PROVIDER_API_KEY</span> (not stored in DB).
+            {t("provider.apiKeyHintPrefix")}{" "}
+            <span className="font-mono">SMM_PROVIDER_API_KEY</span> (not stored in DB).
           </div>
         </label>
 
         <label className="block">
-          <div className="text-sm font-semibold text-[#1F3A5F]">Default markup (%)</div>
+          <div className="text-sm font-semibold text-[#1F3A5F]">{t("provider.defaultMarkup")}</div>
           <input
             value={globalMarkupPercent}
             onChange={(e) => setGlobalMarkupPercent(e.target.value)}
@@ -1033,12 +1172,12 @@ export default function SmmAdminClient({
             className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
           />
           <div className="mt-2 text-xs text-[#2C4E7A]/75">
-            Fallback when a catalog service has no custom &quot;API markup&quot; below. Per-service overrides win.
+            {t("provider.defaultMarkupHint")}
           </div>
         </label>
 
         <label className="block">
-          <div className="text-sm font-semibold text-[#1F3A5F]">Reseller min margin (%)</div>
+          <div className="text-sm font-semibold text-[#1F3A5F]">{t("provider.resellerMinMargin")}</div>
           <input
             value={resellerMinMarginPct}
             onChange={(e) => setResellerMinMarginPct(e.target.value)}
@@ -1057,7 +1196,7 @@ export default function SmmAdminClient({
             onClick={saveProvider}
             className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
           >
-            {pending ? "Saving..." : "Save settings"}
+            {pending ? t("provider.saving") : t("provider.saveSettings")}
           </button>
           <button
             type="button"
@@ -1065,32 +1204,32 @@ export default function SmmAdminClient({
             onClick={doSync}
             className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
           >
-            {pending ? "Syncing..." : "Sync catalog"}
+            {pending ? t("provider.syncing") : t("provider.syncCatalog")}
           </button>
         </div>
       </div>
 
       </CollapsibleSection>
 
-      <CollapsibleSection id="admin-smm-catalog" title="Catalog & service visibility">
+      <CollapsibleSection id="admin-smm-catalog" title={t("sections.catalog")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-semibold text-[#1F3A5F]">Service visibility</div>
+            <div className="text-sm font-semibold text-[#1F3A5F]">{t("catalog.visibilityTitle")}</div>
             <div className="mt-1 text-xs text-[#2C4E7A]/75">
-              Default is OFF. Enable separately for Clients and Resellers.
+              {t("catalog.visibilityHint")}
             </div>
           </div>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or provider ID…"
+            placeholder={t("catalog.searchPlaceholder")}
             className="h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4 sm:w-80"
           />
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-4">
-            <div className="text-sm font-semibold text-[#1F3A5F]">Clients</div>
+            <div className="text-sm font-semibold text-[#1F3A5F]">{t("catalog.clients")}</div>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
@@ -1098,7 +1237,7 @@ export default function SmmAdminClient({
                 onClick={() => bulkSet("clients", true)}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
               >
-                Select all
+                {t("catalog.selectAll")}
               </button>
               <button
                 type="button"
@@ -1106,12 +1245,12 @@ export default function SmmAdminClient({
                 onClick={() => bulkSet("clients", false)}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
               >
-                Unselect all
+                {t("catalog.unselectAll")}
               </button>
             </div>
           </div>
           <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-4">
-            <div className="text-sm font-semibold text-[#1F3A5F]">Resellers</div>
+            <div className="text-sm font-semibold text-[#1F3A5F]">{t("catalog.resellers")}</div>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
@@ -1119,7 +1258,7 @@ export default function SmmAdminClient({
                 onClick={() => bulkSet("resellers", true)}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
               >
-                Select all
+                {t("catalog.selectAll")}
               </button>
               <button
                 type="button"
@@ -1127,7 +1266,7 @@ export default function SmmAdminClient({
                 onClick={() => bulkSet("resellers", false)}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
               >
-                Unselect all
+                {t("catalog.unselectAll")}
               </button>
             </div>
           </div>
@@ -1259,6 +1398,100 @@ export default function SmmAdminClient({
           )}
         </div>
       </CollapsibleSection>
+
+      <CollapsibleSection id="admin-smm-offers" title={t("sections.offers")}>
+        <ClientCategoriesManager
+          key={clientCategoriesVersionKey}
+          allServices={allServicesFlat}
+          categories={clientCategories}
+          pending={pending}
+          onMessage={setStatus}
+          refresh={refresh}
+        />
+      </CollapsibleSection>
+
+      {isPlatformAdmin ? (
+        <CollapsibleSection id="admin-smm-reseller" title={t("sections.reseller")}>
+          <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.title")}</div>
+          <p className="mt-2 text-xs text-[#2C4E7A]/80">
+            {t("reseller.endpointPrefix")} <span className="font-mono">POST /api/reseller/v2</span> (same-origin).{" "}
+            {t("reseller.supportedActions")} <span className="font-mono">services</span>,{" "}
+            <span className="font-mono">add</span>, <span className="font-mono">status</span>,{" "}
+            <span className="font-mono">balance</span>.
+          </p>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <label className="block md:col-span-1">
+              <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.userEmail")}</div>
+              <input
+                value={resellerEmail}
+                onChange={(e) => setResellerEmail(e.target.value)}
+                className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+                placeholder={t("reseller.resellerEmailPlaceholder")}
+              />
+            </label>
+            <label className="block md:col-span-1">
+              <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.resellerDiscount")}</div>
+              <input
+                value={resellerDiscount}
+                onChange={(e) => setResellerDiscount(e.target.value)}
+                inputMode="numeric"
+                className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+              />
+            </label>
+            <div className="flex items-end">
+              <button
+                type="button"
+                disabled={pending || !resellerEmail}
+                onClick={issueResellerKey}
+                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
+              >
+                {t("reseller.issueKey")}
+              </button>
+            </div>
+          </div>
+
+          {issuedKey ? (
+            <div className="mt-4 rounded-xl border border-[#2C4E7A]/15 bg-[#F5F7FA] p-4 text-xs text-[#1F3A5F]">
+              <div className="font-semibold">{t("reseller.apiKeyCopyNow")}</div>
+              <div className="mt-2 break-all font-mono">{issuedKey}</div>
+            </div>
+          ) : null}
+
+          <div className="mt-8 border-t border-[#2C4E7A]/10 pt-6">
+            <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.walletCredit")}</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <label className="block">
+                <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.userEmail")}</div>
+                <input
+                  value={creditEmail}
+                  onChange={(e) => setCreditEmail(e.target.value)}
+                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+                />
+              </label>
+              <label className="block">
+                <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.amountUsd")}</div>
+                <input
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(e.target.value)}
+                  inputMode="decimal"
+                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+                />
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  disabled={pending || !creditEmail}
+                  onClick={creditWallet}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                >
+                  {t("reseller.creditWallet")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
+      ) : null}
     </div>
   );
 }

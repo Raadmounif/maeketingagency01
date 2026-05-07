@@ -11,11 +11,271 @@
     "login": "تسجيل الدخول",
     "getStarted": "ابدأ الآن",
     "signOut": "تسجيل الخروج",
-    "contactUs": "تواصل معنا"
+    "contactUs": "تواصل معنا",
+    "dashboardSectionsTitle": "أقسام لوحة التحكم",
+    "dashboardOverview": "نظرة عامة",
+    "dashboardAddFunds": "إضافة رصيد",
+    "dashboardPayments": "مدفوعاتي",
+    "dashboardOrders": "الخدمات المطلوبة"
   },
   "lang": {
     "switchToArabic": "العربية",
     "switchToEnglish": "English"
+  },
+  "marketing": {
+    "hero": {
+      "ctaDashboard": "الذهاب إلى لوحة التحكم",
+      "ctaGetStarted": "ابدأ الآن",
+      "ctaExploreServices": "استكشف الخدمات"
+    },
+    "features": {
+      "title": "الخدمات",
+      "openService": "فتح الخدمة",
+      "fullDirectory": "دليل الخدمات الكامل"
+    },
+    "footer": {
+      "navigate": "التنقّل",
+      "serviceDirectory": "دليل الخدمات",
+      "rights": "جميع الحقوق محفوظة."
+    },
+    "ctaBand": {
+      "title": "جاهز لتسريع خطوتك القادمة؟",
+      "subtitle": "ابدأ بحساب مشترك، اختر وحدة خدمة، واستمر في بناء الزخم بأمان.",
+      "createAccount": "إنشاء حساب",
+      "signIn": "تسجيل الدخول"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "subtitle": "استخدم حساب PalmyraShift للوصول إلى الخدمات.",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "emailPlaceholder": "you@company.com",
+      "invalid": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+      "signingIn": "جارٍ تسجيل الدخول...",
+      "signIn": "تسجيل الدخول",
+      "noAccount": "ليس لديك حساب؟",
+      "createOne": "أنشئ حسابًا"
+    },
+    "register": {
+      "title": "إنشاء حساب",
+      "subtitle": "حساب واحد يعمل عبر جميع خدمات PalmyraShift.",
+      "nameOptional": "الاسم (اختياري)",
+      "namePlaceholder": "اسمك",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "emailPlaceholder": "you@company.com",
+      "passwordPlaceholder": "على الأقل 8 أحرف",
+      "creating": "جارٍ الإنشاء...",
+      "createAccount": "إنشاء حساب",
+      "alreadyHave": "لديك حساب بالفعل؟",
+      "login": "تسجيل الدخول"
+    }
+  },
+  "servicesPage": {
+    "title": "الخدمات",
+    "subtitlePrefix": "اختر خدمة لاستعراض صفحتها ضمن مسار نطاقك، مثل",
+    "view": "عرض",
+    "route": "المسار"
+  },
+  "adminSmm": {
+    "page": {
+      "crumb": "الإدارة",
+      "title": "نمو SMM",
+      "subtitle": "زامن كتالوج المزوّد، واضبط نسب الربح، وفعّل/عطّل الخدمات للعملاء والموزعين. الوضع الافتراضي: إيقاف.",
+      "backToAdmin": "العودة إلى الإدارة",
+      "openSmmGrowth": "فتح صفحة SMM Growth"
+    },
+    "sections": {
+      "ads": "لوحة إعلانات SMM Growth",
+      "offers": "العروض المميزة",
+      "manual": "الخدمات اليدوية (مخصصة)",
+      "reseller": "واجهة الموزع وخصم الرصيد",
+      "provider": "المزوّد والتسعير",
+      "catalog": "الكتالوج وظهور الخدمات"
+    },
+    "manual": {
+      "help": "أنشئ وأدر الخدمات اليدوية وحدّث حالات طلباتها.",
+      "open": "فتح الخدمات اليدوية"
+    },
+    "status": {
+      "createdClientCategory": "تم إنشاء فئة عميل.",
+      "savedCategory": "تم حفظ الفئة.",
+      "deletedCategory": "تم حذف الفئة.",
+      "addedServiceToCategory": "تمت إضافة الخدمة إلى فئة العميل.",
+      "removedServiceFromCategory": "تمت إزالة الخدمة من الفئة.",
+      "savedProviderSettings": "تم حفظ إعدادات المزوّد.",
+      "syncedImported": "تمت المزامنة. تم استيراد {count} خدمة.",
+      "syncFailed": "فشلت المزامنة.",
+      "updatedVisibility": "تم تحديث الظهور.",
+      "savedClientCopy": "تم حفظ نص العرض للعميل.",
+      "savedApiMarkup": "تم حفظ نسبة ربح API للخدمة.",
+      "issuedResellerKey": "تم إصدار مفتاح API للموزع (يُعرض مرة واحدة).",
+      "creditedWallet": "تم إضافة رصيد للمحفظة.",
+      "saved": "تم الحفظ."
+    },
+    "reseller": {
+      "title": "واجهة الموزع (API)",
+      "endpointPrefix": "المسار:",
+      "supportedActions": "الإجراءات المدعومة:",
+      "userEmail": "بريد المستخدم",
+      "resellerDiscount": "خصم الموزع (%)",
+      "issueKey": "إصدار/تجديد مفتاح API",
+      "apiKeyCopyNow": "مفتاح API (انسخ الآن)",
+      "walletCredit": "إضافة رصيد للمحفظة",
+      "amountUsd": "المبلغ (دولار)",
+      "creditWallet": "إضافة الرصيد",
+      "resellerEmailPlaceholder": "reseller@example.com"
+    },
+    "provider": {
+      "baseUrl": "رابط المزوّد الأساسي",
+      "baseUrlPlaceholder": "https://smmturk.org",
+      "apiKeyHintPrefix": "يتم قراءة مفتاح API من متغير البيئة",
+      "defaultMarkup": "نسبة الربح الافتراضية (%)",
+      "defaultMarkupHint": "قيمة احتياطية عندما لا توجد نسبة مخصصة للخدمة في الكتالوج. الأولوية للنسب الخاصة بكل خدمة.",
+      "resellerMinMargin": "الحد الأدنى لهامش الموزع (%)",
+      "saving": "جارٍ الحفظ...",
+      "saveSettings": "حفظ الإعدادات",
+      "syncing": "جارٍ المزامنة...",
+      "syncCatalog": "مزامنة الكتالوج"
+    },
+    "catalog": {
+      "visibilityTitle": "ظهور الخدمات",
+      "visibilityHint": "الوضع الافتراضي: إيقاف. فعّل بشكل منفصل للعملاء والموزعين.",
+      "searchPlaceholder": "ابحث بالاسم أو رقم الخدمة لدى المزوّد…",
+      "clients": "العملاء",
+      "resellers": "الموزعون",
+      "selectAll": "تحديد الكل",
+      "unselectAll": "إلغاء تحديد الكل"
+    }
+    ,
+    "ads": {
+      "sectionTitle": "صفحة SMM Growth — لوحة الإعلانات",
+      "sectionHelpPrefix": "تظهر في الصفحة العامة",
+      "sectionHelpSuffix": "حسب لغة الموقع عند التفعيل. يمكن لمسؤولي المنصة ومسؤولي SMM Growth تعديل اللغتين. الوسائط: صورة HTTPS أو GIF أو .mp4/.webm أو روابط YouTube/Vimeo.",
+      "langEn": "الإنجليزية (en)",
+      "langAr": "العربية (ar)",
+      "title": "العنوان",
+      "body": "النص",
+      "uploadPhoto": "رفع صورة",
+      "uploading": "جارٍ الرفع…",
+      "removePhoto": "إزالة الصورة",
+      "saveEn": "حفظ لوحة الإنجليزية",
+      "saveAr": "حفظ لوحة العربية",
+      "savedBoard": "تم حفظ لوحة {lang}."
+      ,
+      "topServicesTitle": "أفضل خدماتنا",
+      "topServicesHelp": "قم بترتيب قائمة خدمات تظهر للعملاء في صفحة /trust. عند الضغط على البطاقة سيتم الانتقال للطلب.",
+      "pickType": "النوع",
+      "pickItem": "العنصر",
+      "pickSort": "الترتيب",
+      "pickApi": "خدمة API",
+      "pickManual": "خدمة يدوية",
+      "pickOffer": "عرض مميز",
+      "addPick": "إضافة",
+      "noPicks": "لم تتم إضافة خدمات بعد.",
+      "pickEnabled": "مفعّل",
+      "pickHidden": "مخفي",
+      "deletePick": "حذف"
+    }
+  },
+  "adminOverview": {
+    "stats": {
+      "title": "نظرة عامة وإحصائيات",
+      "pendingPayments": "مدفوعات معلّقة",
+      "approvedPaymentsClick": "مدفوعات معتمدة (اضغط)",
+      "successfulOrders": "الطلبات الناجحة (API + يدوي)",
+      "chargedUncharged": "حسابات مشحونة / غير مشحونة",
+      "approvedDetailsTitle": "تفاصيل المدفوعات المعتمدة",
+      "when": "التاريخ",
+      "client": "العميل",
+      "method": "الطريقة",
+      "amount": "المبلغ",
+      "note": "ملاحظة",
+      "proof": "الإثبات",
+      "noApprovedYet": "لا توجد مدفوعات معتمدة بعد.",
+      "open": "فتح",
+      "mostOrdered": "الخدمات الأكثر طلبًا",
+      "service": "الخدمة",
+      "completedOrders": "طلبات مكتملة",
+      "noCompletedYet": "لا توجد طلبات مكتملة بعد."
+      ,
+      "allOrdersTitle": "جميع الطلبات",
+      "apiOrders": "طلبات API",
+      "manualOrders": "طلبات يدوية",
+      "offerOrders": "طلبات العروض المميزة",
+      "status": "الحالة",
+      "serviceOrOffer": "الخدمة / العرض",
+      "details": "التفاصيل",
+      "noOrders": "لا توجد طلبات بعد."
+    }
+  },
+  "adminPayments": {
+    "page": {
+      "crumb": "الإدارة",
+      "title": "المدفوعات",
+      "subtitle": "إعداد طرق الدفع والموافقة على طلبات الشحن المعلّقة.",
+      "pending": "معلّق",
+      "approved": "معتمد",
+      "backToAdmin": "العودة إلى الإدارة",
+      "openDashboard": "فتح لوحة التحكم"
+    },
+    "methods": {
+      "sectionTitle": "طرق الدفع",
+      "help": "تظهر هذه الطرق عندما يقوم العملاء بإضافة رصيد من لوحة التحكم.",
+      "created": "تم إنشاء الطريقة.",
+      "name": "الاسم",
+      "descriptionOptional": "وصف (اختياري)",
+      "photoUrlOptional": "رابط صورة (اختياري)",
+      "sort": "الترتيب",
+      "enabled": "مفعّل",
+      "saving": "جارٍ الحفظ…",
+      "addMethod": "إضافة طريقة",
+      "tableName": "الاسم",
+      "tableEnabled": "مفعّل",
+      "tableSort": "الترتيب",
+      "tablePhotoUrl": "رابط الصورة",
+      "saved": "تم الحفظ.",
+      "deleted": "تم الحذف.",
+      "deleteConfirm": "هل تريد حذف طريقة الدفع؟ (مسموح فقط إذا لم تكن لديها طلبات)"
+    },
+    "requests": {
+      "sectionTitle": "طلبات الدفع",
+      "help": "الموافقة تُضيف رصيدًا لمحفظة المستخدم. يمكن لمسؤول المنصة استرجاع المبلغ (خصم) للطلبات المعتمدة.",
+      "show": "عرض",
+      "filterPending": "معلّق",
+      "filterApproved": "معتمد",
+      "filterAll": "الكل",
+      "tableWhen": "التاريخ",
+      "tableClient": "العميل",
+      "tableMethod": "الطريقة",
+      "tableAmount": "المبلغ",
+      "tableStatus": "الحالة",
+      "tableNote": "ملاحظة",
+      "tableProof": "الإثبات",
+      "none": "—",
+      "open": "فتح",
+      "noRequests": "لا توجد طلبات.",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "approvedFlash": "تمت الموافقة.",
+      "rejectedFlash": "تم الرفض.",
+      "refund": "استرجاع",
+      "refundConfirm": "هل تريد استرجاع هذه الدفعة؟ سيتم خصمها من محفظة المستخدم.",
+      "refundedFlash": "تم الاسترجاع."
+    }
+  },
+  "dashboardPage": {
+    "title": "لوحة التحكم",
+    "walletBalance": "رصيد المحفظة:",
+    "addFunds": "إضافة رصيد",
+    "myPayments": "مدفوعاتي",
+    "orderedServices": "الخدمات المطلوبة",
+    "submitting": "جارٍ الإرسال…",
+    "submitRequest": "إرسال الطلب",
+    "paymentCreated": "تم إنشاء طلب الدفع.",
+    "requestFailed": "فشل الطلب."
   },
   "smmTrust": {
     "hero": {
@@ -23,6 +283,10 @@
       "subtitle": "خدمات التسويق عبر السوشيال من لوحة واحدة — أسعار واضحة، سرعة، وموثوقية.",
       "login": "تسجيل الدخول",
       "register": "إنشاء حساب"
+    },
+    "topPicks": {
+      "title": "أفضل خدماتنا",
+      "help": "اختصارات سريعة لأشهر الخدمات والعروض."
     },
     "order": {
       "sectionTitle": "إنشاء طلب",
@@ -76,8 +340,9 @@
       "order": "اطلب",
       "loginToOrder": "سجّل الدخول للطلب",
       "confirmTitle": "تأكيد الطلب",
-      "noteLabel": "ملاحظة للفريق (اختياري)",
-      "notePlaceholder": "روابط، أهداف، مواعيد…",
+      "manualUrl": "الرابط",
+      "manualUnits": "عدد الوحدات",
+      "manualTotal": "الإجمالي",
       "cancel": "إلغاء",
       "submitOrder": "إرسال الطلب",
       "placing": "جاري الإرسال…",

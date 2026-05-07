@@ -1,5 +1,6 @@
 import { Link } from "@/i18n/routing";
 import { serviceCatalog } from "@/lib/services-catalog";
+import { getTranslations } from "next-intl/server";
 import { IconLayers, IconShield } from "./icons";
 
 function iconForSlug(slug: string) {
@@ -11,7 +12,8 @@ function iconForSlug(slug: string) {
   }
 }
 
-export function Features() {
+export async function Features() {
+  const t = await getTranslations("marketing.features");
   const count = serviceCatalog.length;
   const gridClass =
     count >= 3
@@ -25,7 +27,7 @@ export function Features() {
       <div className="mx-auto max-w-6xl px-4 sm:px-5">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight text-[#1F3A5F] sm:text-3xl md:text-4xl">
-            Services
+            {t("title")}
           </h2>
         </div>
 
@@ -48,7 +50,7 @@ export function Features() {
                   {service.description}
                 </p>
                 <p className="mt-4 text-sm font-semibold text-[#FF8C00]">
-                  Open service
+                  {t("openService")}
                   <span aria-hidden className="ml-1">
                     →
                   </span>
@@ -63,7 +65,7 @@ export function Features() {
             href="/services"
             className="inline-flex min-h-12 w-full max-w-md items-center justify-center gap-2 rounded-xl border border-[#2C4E7A]/20 bg-white px-5 py-3 text-sm font-semibold text-[#1F3A5F] shadow-sm transition active:bg-[#EEF2F7] sm:w-auto sm:py-2.5 hover:bg-[#F5F7FA]"
           >
-            Full service directory
+            {t("fullDirectory")}
             <span aria-hidden>→</span>
           </Link>
         </div>

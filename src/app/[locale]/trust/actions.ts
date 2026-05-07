@@ -122,6 +122,8 @@ export async function placeSmmGrowthOrderAction(input: {
 
 export async function placeCustomServiceOrderAction(input: {
   serviceId: string;
+  link: string;
+  units: number;
   clientNote?: string | null;
 }) {
   const session = await getSession();
@@ -140,9 +142,19 @@ export async function placeCustomServiceOrderAction(input: {
     return { ok: false as const, message: "This service is not available." };
   }
 
+  const link = String(input.link ?? "").trim().slice(0, 2048);
+  if (!link) return { ok: false as const, message: "Please enter a URL." };
+
+  const units = Math.floor(Number(input.units) || 0);
+  if (!Number.isFinite(units) || units <= 0) {
+    return { ok: false as const, message: "Units must be 1 or greater." };
+  }
+
   const note = String(input.clientNote ?? "").trim().slice(0, 512) || null;
 
-  const chargeCents = dollarsToCents(Number(service.priceUsd));
+  const unitPriceUsd = Number(service.unitPriceUsd);
+  const totalUsd = unitPriceUsd * units;
+  const chargeCents = dollarsToCents(totalUsd);
   if (chargeCents < 0) {
     return { ok: false as const, message: "Invalid service price." };
   }
@@ -168,6 +180,9 @@ export async function placeCustomServiceOrderAction(input: {
       data: {
         serviceId,
         userId,
+        link,
+        units,
+        totalUsd,
         clientNote: note,
       },
     });
@@ -196,7 +211,7 @@ export async function placeSmmOfferOrderAction(input: {
   if (!offer || !offer.enabled) return { ok: false as const, message: "Offer not available." };
 
   const items = offer.items
-    .filter((it) => it.service.enabledForClients && !it.service.isArchived)
+    .filter((it) => !it.service.isArchived)
     .map((it) => ({
       itemId: it.id,
       serviceId: it.serviceId,

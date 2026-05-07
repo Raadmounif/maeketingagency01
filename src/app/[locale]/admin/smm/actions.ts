@@ -10,6 +10,9 @@ import { ensureSmmProviderConfig } from "@/lib/smm/provider-config";
 import { syncSmmCatalogFromProvider } from "@/lib/smm/sync-catalog";
 import { generateResellerApiKey, hashResellerApiKey } from "@/lib/reseller-key";
 import { dollarsToCents, creditWallet } from "@/lib/wallet";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
 
 async function requireSmmAdmin() {
   await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
@@ -350,6 +353,99 @@ export async function updateSmmAdvertisingBoardAction(input: {
     },
   });
 
+  return { ok: true as const };
+}
+
+export async function uploadSmmAdvertisingBoardPhotoAction(formData: FormData) {
+  await requireSmmAdmin();
+  const localeRaw = String(formData.get("locale") ?? "").trim();
+  const locale = localeRaw === "ar" ? "ar" : "en";
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false as const, message: "Missing file." };
+  }
+  if (!file.type.startsWith("image/")) {
+    return { ok: false as const, message: "Only image uploads are supported." };
+  }
+  const maxBytes = 6 * 1024 * 1024;
+  if (file.size <= 0 || file.size > maxBytes) {
+    return { ok: false as const, message: "Image must be under 6MB." };
+  }
+
+  const ext =
+    file.type === "image/png"
+      ? "png"
+      : file.type === "image/webp"
+        ? "webp"
+        : file.type === "image/gif"
+          ? "gif"
+          : "jpg";
+
+  const buf = Buffer.from(await file.arrayBuffer());
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const rand = crypto.randomBytes(6).toString("hex");
+  const filename = `smm-ad-${locale}-${stamp}-${rand}.${ext}`;
+
+  const uploadsDir = path.join(process.cwd(), "public", "uploads", "smm-ad-board");
+  await mkdir(uploadsDir, { recursive: true });
+  await writeFile(path.join(uploadsDir, filename), buf);
+
+  // Public URL served by Next from /public
+  return { ok: true as const, url: `/uploads/smm-ad-board/${filename}` };
+}
+
+export async function addSmmTopPickAction(input: {
+  kind: "API" | "MANUAL" | "OFFER";
+  refId: string;
+  sort?: number;
+  enabled?: boolean;
+}) {
+  await requireSmmAdmin();
+  const kind = input.kind === "MANUAL" ? "MANUAL" : input.kind === "OFFER" ? "OFFER" : "API";
+  const refId = String(input.refId ?? "").trim();
+  if (!refId) return { ok: false as const, message: "Missing item." };
+  const sort = Number.isFinite(Number(input.sort)) ? Number(input.sort) : 0;
+  const enabled = input.enabled !== false;
+
+  await prisma.smmTopServicePick.create({
+    data: {
+      kind,
+      refId,
+      sort,
+      enabled,
+    },
+  });
+
+  revalidatePath("/admin/smm");
+  revalidatePath("/trust");
+  return { ok: true as const };
+}
+
+export async function updateSmmTopPickAction(input: {
+  id: string;
+  sort?: number;
+  enabled?: boolean;
+}) {
+  await requireSmmAdmin();
+  const id = String(input.id ?? "").trim();
+  if (!id) return { ok: false as const, message: "Missing pick id." };
+  const data: { sort?: number; enabled?: boolean } = {};
+  if (input.sort !== undefined) data.sort = Number(input.sort) || 0;
+  if (input.enabled !== undefined) data.enabled = Boolean(input.enabled);
+
+  await prisma.smmTopServicePick.update({ where: { id }, data });
+  revalidatePath("/admin/smm");
+  revalidatePath("/trust");
+  return { ok: true as const };
+}
+
+export async function deleteSmmTopPickAction(input: { id: string }) {
+  await requireSmmAdmin();
+  const id = String(input.id ?? "").trim();
+  if (!id) return { ok: false as const, message: "Missing pick id." };
+  await prisma.smmTopServicePick.delete({ where: { id } });
+  revalidatePath("/admin/smm");
+  revalidatePath("/trust");
   return { ok: true as const };
 }
 

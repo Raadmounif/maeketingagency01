@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function CollapsibleSection({
   id,
@@ -10,6 +10,10 @@ export function CollapsibleSection({
   defaultOpen = false,
   className = "",
   bodyClassName,
+  /** When this matches `location.hash` (without `#`), the section opens and scrolls into view. */
+  urlHashId = "",
+  /** Incrementing value to re-trigger open even if hash string is unchanged. */
+  urlHashNonce = 0,
 }: {
   id: string;
   title: string;
@@ -19,6 +23,8 @@ export function CollapsibleSection({
   className?: string;
   /** Panel body classes; default adds top border and padding. */
   bodyClassName?: string;
+  urlHashId?: string;
+  urlHashNonce?: number;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = `${id}-panel`;
@@ -26,9 +32,25 @@ export function CollapsibleSection({
   const body =
     bodyClassName ?? "border-t border-[#2C4E7A]/12 px-5 pb-5 pt-1";
 
+  useEffect(() => {
+    if (!urlHashId || urlHashId !== id) return;
+    setOpen(true);
+  }, [urlHashId, urlHashNonce, id]);
+
+  useEffect(() => {
+    if (!open || !urlHashId || urlHashId !== id) return;
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, urlHashId, id]);
+
   return (
     <section
-      className={["overflow-hidden rounded-xl border border-[#2C4E7A]/12 bg-white shadow-sm", className]
+      id={id}
+      className={["scroll-mt-[5.75rem] overflow-hidden rounded-xl border border-[#2C4E7A]/12 bg-white shadow-sm", className]
         .filter(Boolean)
         .join(" ")}
     >
