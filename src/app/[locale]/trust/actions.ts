@@ -196,6 +196,7 @@ export async function placeCustomServiceOrderAction(input: {
 export async function placeSmmOfferOrderAction(input: {
   categoryId: string;
   linksByServiceId: Record<string, string>;
+  manualLinksByCustomServiceId?: Record<string, string>;
 }) {
   const session = await getSession();
   const userId = (session?.user as unknown as { id?: string })?.id;
@@ -206,7 +207,10 @@ export async function placeSmmOfferOrderAction(input: {
 
   const offer = await prisma.smmClientCategory.findUnique({
     where: { id: categoryId },
-    include: { items: { include: { service: true } } },
+    include: {
+      items: { include: { service: true } },
+      manualItems: { include: { customService: true } },
+    },
   });
   if (!offer || !offer.enabled) return { ok: false as const, message: "Offer not available." };
 
@@ -220,7 +224,15 @@ export async function placeSmmOfferOrderAction(input: {
     }))
     .filter((it) => it.quantity > 0);
 
-  if (items.length === 0) {
+  const manualItems = offer.manualItems
+    .filter((it) => it.customService.enabled)
+    .map((it) => ({
+      customServiceId: it.customServiceId,
+      units: Math.floor(Number(it.offerUnits) || 0),
+    }))
+    .filter((it) => it.units > 0);
+
+  if (items.length === 0 && manualItems.length === 0) {
     return { ok: false as const, message: "This offer has no active services." };
   }
 
@@ -230,6 +242,13 @@ export async function placeSmmOfferOrderAction(input: {
     const link = String(input.linksByServiceId?.[it.serviceId] ?? "").trim();
     if (!link) return { ok: false as const, message: "Please fill all URLs." };
     links[it.serviceId] = link.slice(0, 2048);
+  }
+
+  const manualLinks: Record<string, string> = {};
+  for (const it of manualItems) {
+    const link = String(input.manualLinksByCustomServiceId?.[it.customServiceId] ?? "").trim();
+    if (!link) return { ok: false as const, message: "Please fill all URLs." };
+    manualLinks[it.customServiceId] = link.slice(0, 2048);
   }
 
   const chargeCents = Math.max(0, Math.floor(Number(offer.offerPriceCents) || 0));
@@ -261,8 +280,15 @@ export async function placeSmmOfferOrderAction(input: {
             quantity: it.quantity,
           })),
         },
+        manualItems: {
+          create: manualItems.map((it) => ({
+            customServiceId: it.customServiceId,
+            link: manualLinks[it.customServiceId]!,
+            units: it.units,
+          })),
+        },
       },
-      include: { items: true },
+      include: { items: true, manualItems: true },
     });
 
     // create SmmOrder rows without debiting (we already charged the offer once)
@@ -291,6 +317,26 @@ export async function placeSmmOfferOrderAction(input: {
       await tx.smmOfferOrderItem.update({
         where: { id: oi.id },
         data: { smmOrderId: o.id },
+      });
+    }
+
+    // create CustomServiceOrder rows for manual items (no extra debit; offer already charged once)
+    for (const mi of offerOrder.manualItems) {
+      const createdManual = await tx.customServiceOrder.create({
+        data: {
+          userId,
+          serviceId: mi.customServiceId,
+          status: "ORDERED",
+          link: mi.link,
+          units: mi.units,
+          totalUsd: 0,
+          clientNote: null,
+        },
+        select: { id: true },
+      });
+      await tx.smmOfferOrderManualItem.update({
+        where: { id: mi.id },
+        data: { customServiceOrderId: createdManual.id },
       });
     }
 

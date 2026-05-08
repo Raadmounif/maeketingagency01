@@ -12,6 +12,8 @@ import {
   issueResellerApiKeyAction,
   addServiceToSmmClientCategoryAction,
   removeServiceFromSmmClientCategoryAction,
+  addManualServiceToSmmClientCategoryAction,
+  removeManualServiceFromSmmClientCategoryAction,
   syncSmmCatalogAction,
   updateSmmAdvertisingBoardAction,
   uploadSmmAdvertisingBoardPhotoAction,
@@ -61,6 +63,13 @@ type Defaults = {
       markupPct: number;
       offerQuantity: number;
     }>;
+    manualItems: Array<{
+      id: string;
+      customServiceId: string;
+      customServiceName: string;
+      offerUnits: number;
+      sort: number;
+    }>;
   }>;
   categories: CategoryRow[];
 };
@@ -106,12 +115,14 @@ function buildFlags(categories: CategoryRow[]) {
 
 function ClientCategoriesManager({
   allServices,
+  manualServices,
   categories,
   pending,
   onMessage,
   refresh,
 }: {
   allServices: Array<{ id: string; name: string }>;
+  manualServices: Array<{ id: string; name: string; enabled: boolean }>;
   categories: ClientCategoryRow[];
   pending: boolean;
   onMessage: (msg: string | null) => void;
@@ -126,6 +137,7 @@ function ClientCategoriesManager({
       ...c,
       offerPriceUsd: ((Number(c.offerPriceCents) || 0) / 100).toFixed(2),
       items: [...c.items],
+      manualItems: [...c.manualItems],
     })),
   );
 
@@ -140,6 +152,11 @@ function ClientCategoriesManager({
   const [addMarkupPct, setAddMarkupPct] = useState("0");
   const [addOfferQuantity, setAddOfferQuantity] = useState("1000");
   const [addSort, setAddSort] = useState("0");
+
+  const [addManualCategoryId, setAddManualCategoryId] = useState<string>("");
+  const [addCustomServiceId, setAddCustomServiceId] = useState<string>("");
+  const [addOfferUnits, setAddOfferUnits] = useState("1");
+  const [addManualSort, setAddManualSort] = useState("0");
 
   function createCategory() {
     onMessage(null);
@@ -213,6 +230,34 @@ function ClientCategoriesManager({
     onMessage(null);
     startTransition(async () => {
       const res = await removeServiceFromSmmClientCategoryAction({ itemId });
+      onMessage(res.ok ? t("status.removedServiceFromCategory") : res.message);
+      refresh();
+    });
+  }
+
+  function addManualService() {
+    onMessage(null);
+    startTransition(async () => {
+      const res = await addManualServiceToSmmClientCategoryAction({
+        categoryId: addManualCategoryId,
+        customServiceId: addCustomServiceId,
+        offerUnits: Number(addOfferUnits),
+        sort: Number(addManualSort),
+      });
+      onMessage(res.ok ? t("status.addedServiceToCategory") : res.message);
+      if (res.ok) {
+        setAddCustomServiceId("");
+        setAddOfferUnits("1");
+        setAddManualSort("0");
+      }
+      refresh();
+    });
+  }
+
+  function removeManualItem(itemId: string) {
+    onMessage(null);
+    startTransition(async () => {
+      const res = await removeManualServiceFromSmmClientCategoryAction({ itemId });
       onMessage(res.ok ? t("status.removedServiceFromCategory") : res.message);
       refresh();
     });
@@ -353,6 +398,68 @@ function ClientCategoriesManager({
         </div>
       </div>
 
+      <div className="mt-4 grid gap-4 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4 lg:grid-cols-5">
+        <label className="block lg:col-span-2">
+          <div className="text-xs font-semibold text-[#1F3A5F]">Category</div>
+          <select
+            value={addManualCategoryId}
+            onChange={(e) => setAddManualCategoryId(e.target.value)}
+            className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+          >
+            <option value="">Choose…</option>
+            {cats.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nameEn} / {c.nameAr}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block lg:col-span-2">
+          <div className="text-xs font-semibold text-[#1F3A5F]">Manual service</div>
+          <select
+            value={addCustomServiceId}
+            onChange={(e) => setAddCustomServiceId(e.target.value)}
+            className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+          >
+            <option value="">Choose…</option>
+            {manualServices.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+                {s.enabled ? "" : " (disabled)"}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <div className="text-xs font-semibold text-[#1F3A5F]">Units</div>
+          <input
+            value={addOfferUnits}
+            onChange={(e) => setAddOfferUnits(e.target.value)}
+            inputMode="numeric"
+            className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+          />
+        </label>
+        <label className="block">
+          <div className="text-xs font-semibold text-[#1F3A5F]">Sort</div>
+          <input
+            value={addManualSort}
+            onChange={(e) => setAddManualSort(e.target.value)}
+            inputMode="numeric"
+            className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
+          />
+        </label>
+        <div className="flex items-end">
+          <button
+            type="button"
+            disabled={busy || !addManualCategoryId || !addCustomServiceId}
+            onClick={addManualService}
+            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+          >
+            Add manual
+          </button>
+        </div>
+      </div>
+
       <div className="mt-6 space-y-4">
         {cats.length === 0 ? (
           <div className="text-sm text-[#2C4E7A]/80">No client categories yet.</div>
@@ -449,32 +556,52 @@ function ClientCategoriesManager({
               </div>
 
               <div className="divide-y divide-[#2C4E7A]/10">
-                {c.items.length === 0 ? (
+                {c.items.length === 0 && c.manualItems.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-[#2C4E7A]/80">No services assigned.</div>
-                ) : (
-                  c.items.map((it) => (
-                    <div
-                      key={it.id}
-                      className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-[#1F3A5F]">{it.serviceName}</div>
-                        <div className="mt-1 text-xs text-[#2C4E7A]/75">Markup: {it.markupPct}%</div>
-                        <div className="mt-1 text-xs text-[#2C4E7A]/75">
-                          Offer quantity: {it.offerQuantity}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => removeItem(it.id)}
-                        className="inline-flex h-9 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
-                      >
-                        Remove
-                      </button>
+                ) : null}
+
+                {c.items.map((it) => (
+                  <div
+                    key={it.id}
+                    className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-[#1F3A5F]">{it.serviceName}</div>
+                      <div className="mt-1 text-xs text-[#2C4E7A]/75">Markup: {it.markupPct}%</div>
+                      <div className="mt-1 text-xs text-[#2C4E7A]/75">Offer quantity: {it.offerQuantity}</div>
                     </div>
-                  ))
-                )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => removeItem(it.id)}
+                      className="inline-flex h-9 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+
+                {c.manualItems.map((it) => (
+                  <div
+                    key={it.id}
+                    className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-[#1F3A5F]">
+                        {it.customServiceName} <span className="text-xs font-medium text-[#2C4E7A]/70">(manual)</span>
+                      </div>
+                      <div className="mt-1 text-xs text-[#2C4E7A]/75">Units: {it.offerUnits}</div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => removeManualItem(it.id)}
+                      className="inline-flex h-9 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           ))
@@ -1403,6 +1530,7 @@ export default function SmmAdminClient({
         <ClientCategoriesManager
           key={clientCategoriesVersionKey}
           allServices={allServicesFlat}
+          manualServices={topPickOptions.manualServices}
           categories={clientCategories}
           pending={pending}
           onMessage={setStatus}

@@ -410,6 +410,7 @@ model SmmClientCategory {
   sort    Int     @default(0)
 
   items SmmClientCategoryItem[]
+  manualItems SmmClientCategoryManualItem[]
 
   offerOrders SmmOfferOrder[]
 
@@ -438,6 +439,28 @@ model SmmClientCategoryItem {
   @@index([categoryId])
 }
 
+/** Manual services (CustomService) attached to a Featured offer. */
+model SmmClientCategoryManualItem {
+  id String @id @default(cuid())
+
+  categoryId String
+  category   SmmClientCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  customServiceId String
+  customService   CustomService @relation(fields: [customServiceId], references: [id], onDelete: Cascade)
+
+  /** Fixed units for this manual service when ordering the whole offer. */
+  offerUnits Int @default(1)
+  sort       Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([customServiceId])
+  @@unique([categoryId, customServiceId])
+}
+
 enum SmmOfferOrderStatus {
   PENDING
   PROCESSING
@@ -460,6 +483,7 @@ model SmmOfferOrder {
   status      SmmOfferOrderStatus @default(PENDING)
 
   items SmmOfferOrderItem[]
+  manualItems SmmOfferOrderManualItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -491,6 +515,29 @@ model SmmOfferOrderItem {
   @@index([serviceId])
 }
 
+/** Manual-service line items within a bundle offer order. */
+model SmmOfferOrderManualItem {
+  id String @id @default(cuid())
+
+  offerOrderId String
+  offerOrder   SmmOfferOrder @relation(fields: [offerOrderId], references: [id], onDelete: Cascade)
+
+  customServiceId String
+  customService   CustomService @relation(fields: [customServiceId], references: [id], onDelete: Restrict)
+
+  link  String @db.VarChar(2048)
+  units Int
+
+  customServiceOrderId String? @unique
+  customServiceOrder   CustomServiceOrder? @relation(fields: [customServiceOrderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([offerOrderId])
+  @@index([customServiceId])
+}
+
 /** Admin-defined services not synced from the SMM provider API. */
 model CustomService {
   id          String  @id @default(cuid())
@@ -502,6 +549,10 @@ model CustomService {
   sort        Int     @default(0)
 
   orders CustomServiceOrder[]
+
+  // Featured offers + offer orders (manual line items)
+  featuredOfferItems SmmClientCategoryManualItem[]
+  offerOrderItems    SmmOfferOrderManualItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -530,6 +581,9 @@ model CustomServiceOrder {
   totalUsd Decimal @db.Decimal(10, 2)
   /** Optional note from the client when placing the order. */
   clientNote String? @db.VarChar(512)
+
+  // Optional link from offer manual line item → this order
+  offerManualItems SmmOfferOrderManualItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -178,12 +178,16 @@ export default async function TrustPage() {
         orderBy: [{ sort: "asc" }, { updatedAt: "desc" }],
         include: { service: true },
       },
+      manualItems: {
+        orderBy: [{ sort: "asc" }, { updatedAt: "desc" }],
+        include: { customService: true },
+      },
     },
   });
 
   const clientBundles = clientCategoriesForBundles
     .map((cat) => {
-      const options = cat.items
+      const apiOptions = cat.items
         .filter((it) => !it.service.isArchived)
         .map((it) => {
           const s = it.service;
@@ -200,6 +204,7 @@ export default async function TrustPage() {
                   }),
                 );
           return {
+            kind: "API" as const,
             id: s.id,
             name: s.clientTitle?.trim() || s.providerName,
             description: s.clientDescription?.trim() || null,
@@ -210,9 +215,22 @@ export default async function TrustPage() {
             offerQuantity: it.offerQuantity,
           };
         });
+
+      const manualOptions = cat.manualItems
+        .filter((it) => it.customService.enabled)
+        .map((it) => ({
+          kind: "MANUAL" as const,
+          id: it.customServiceId,
+          name: it.customService.name,
+          description: it.customService.description,
+          offerUnits: it.offerUnits,
+        }));
+
+      const options = [...apiOptions, ...manualOptions];
       if (options.length === 0) return null;
-      const rates = options.map((o) => Number(o.rate));
-      const minRate = Math.min(...rates);
+
+      const apiRates = apiOptions.map((o) => Number(o.rate)).filter((n) => Number.isFinite(n));
+      const minRate = apiRates.length ? Math.min(...apiRates) : null;
       const firstName = options[0]!.name;
       const previewLine =
         localeKey === "ar"
@@ -226,7 +244,7 @@ export default async function TrustPage() {
         id: cat.id,
         name: localeKey === "ar" ? cat.nameAr : cat.nameEn,
         previewLine,
-        minRate: String(minRate),
+        minRate: minRate != null ? String(minRate) : "",
         offerPriceCents: cat.offerPriceCents,
         serviceCount: options.length,
         options,

@@ -42,6 +42,16 @@ type Service = {
   offerQuantity?: number;
 };
 
+type OfferOption =
+  | (Service & { kind: "API" })
+  | {
+      kind: "MANUAL";
+      id: string;
+      name: string;
+      description?: string | null;
+      offerUnits: number;
+    };
+
 type Category = {
   id: string;
   name: string;
@@ -72,7 +82,7 @@ export type ClientOfferBundle = {
   minRate: string;
   offerPriceCents: number;
   serviceCount: number;
-  options: Service[];
+  options: OfferOption[];
 };
 
 export default function TrustClient({
@@ -197,7 +207,8 @@ export default function TrustClient({
       }
       const next: Record<string, string> = {};
       for (const opt of bundleModal.options) {
-        next[opt.id] = "";
+        const key = `${opt.kind}:${opt.id}`;
+        next[key] = "";
       }
       setBundleLinks(next);
       setBundleOrderMessage(null);
@@ -206,9 +217,10 @@ export default function TrustClient({
 
   const bundleLinksValid = useMemo(() => {
     if (!bundleModal) return false;
-    return bundleModal.options.every(
-      (opt) => String(bundleLinks[opt.id] ?? "").trim().length > 0,
-    );
+    return bundleModal.options.every((opt) => {
+      const key = `${opt.kind}:${opt.id}`;
+      return String(bundleLinks[key] ?? "").trim().length > 0;
+    });
   }, [bundleModal, bundleLinks]);
 
   const canSubmitBundleOrder =
@@ -807,18 +819,23 @@ export default function TrustClient({
 
             <div className="mt-4 space-y-3">
               {bundleModal.options.map((opt) => (
-                <label key={opt.id} className="block text-sm font-semibold text-[#1F3A5F]">
+                <label key={`${opt.kind}:${opt.id}`} className="block text-sm font-semibold text-[#1F3A5F]">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="truncate">{opt.name}</span>
                     <span className="shrink-0 text-xs font-medium text-[#2C4E7A]/75">
-                      {t("clientOffers.fixedQuantity", { qty: opt.offerQuantity ?? 0 })}
+                      {opt.kind === "API"
+                        ? t("clientOffers.fixedQuantity", { qty: opt.offerQuantity ?? 0 })
+                        : t("clientOffers.fixedQuantity", { qty: opt.offerUnits ?? 0 })}
                     </span>
                   </div>
                   <input
                     className="mt-2 h-11 w-full rounded-lg border border-[#2C4E7A]/20 px-3 text-sm"
-                    value={bundleLinks[opt.id] ?? ""}
+                    value={bundleLinks[`${opt.kind}:${opt.id}`] ?? ""}
                     onChange={(e) =>
-                      setBundleLinks((prev) => ({ ...prev, [opt.id]: e.target.value }))
+                      setBundleLinks((prev) => ({
+                        ...prev,
+                        [`${opt.kind}:${opt.id}`]: e.target.value,
+                      }))
                     }
                     placeholder={t("clientOffers.urlPlaceholder")}
                   />
@@ -854,9 +871,19 @@ export default function TrustClient({
                 className="rounded-lg bg-[#1F3A5F] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 onClick={() => {
                   startTransition(async () => {
+                    const apiLinks: Record<string, string> = {};
+                    const manualLinks: Record<string, string> = {};
+                    for (const opt of bundleModal.options) {
+                      const key = `${opt.kind}:${opt.id}`;
+                      const v = String(bundleLinks[key] ?? "").trim();
+                      if (!v) continue;
+                      if (opt.kind === "API") apiLinks[opt.id] = v;
+                      else manualLinks[opt.id] = v;
+                    }
                     const res = await placeSmmOfferOrderAction({
                       categoryId: bundleModal.id,
-                      linksByServiceId: bundleLinks,
+                      linksByServiceId: apiLinks,
+                      manualLinksByCustomServiceId: manualLinks,
                     });
                     if (!res.ok) {
                       setBundleOrderMessage(res.message);

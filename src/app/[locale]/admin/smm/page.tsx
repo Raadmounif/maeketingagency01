@@ -26,7 +26,7 @@ export default async function SmmAdminPage() {
     orderBy: [{ sort: "asc" }, { providerName: "asc" }],
     include: {
       services: {
-        where: { isArchived: false, enabledForClients: true },
+        where: { isArchived: false },
         orderBy: [{ providerName: "asc" }],
       },
     },
@@ -48,10 +48,19 @@ export default async function SmmAdminPage() {
         orderBy: [{ sort: "asc" }, { updatedAt: "desc" }],
         include: { service: { select: { id: true, providerName: true } } },
       },
+      manualItems: {
+        orderBy: [{ sort: "asc" }, { updatedAt: "desc" }],
+        include: { customService: { select: { id: true, name: true } } },
+      },
     },
   });
   const clientCategoriesVersionKey = clientCategories
-    .map((c) => `${c.id}:${c.updatedAt.toISOString()}:${c.items.map((it) => it.updatedAt.toISOString()).join(",")}`)
+    .map(
+      (c) =>
+        `${c.id}:${c.updatedAt.toISOString()}:${c.items.map((it) => it.updatedAt.toISOString()).join(",")}:${c.manualItems
+          .map((it) => it.updatedAt.toISOString())
+          .join(",")}`,
+    )
     .join("|");
 
   const [manualServices, topPicks] = await Promise.all([
@@ -113,10 +122,12 @@ export default async function SmmAdminPage() {
             }))}
             topPickOptions={{
               apiServices: categories.flatMap((c) =>
-                c.services.map((s) => ({
-                  id: s.id,
-                  name: s.clientTitle?.trim() || s.providerName,
-                })),
+                c.services
+                  .filter((s) => s.enabledForClients)
+                  .map((s) => ({
+                    id: s.id,
+                    name: s.clientTitle?.trim() || s.providerName,
+                  })),
               ),
               manualServices: manualServices.map((s) => ({ id: s.id, name: s.name, enabled: s.enabled })),
               offers: clientCategories.map((c) => ({ id: c.id, nameEn: c.nameEn, nameAr: c.nameAr, enabled: c.enabled })),
@@ -138,6 +149,13 @@ export default async function SmmAdminPage() {
                   serviceName: it.service.providerName,
                   markupPct: it.markupPct,
                   offerQuantity: it.offerQuantity,
+                })),
+                manualItems: c.manualItems.map((it) => ({
+                  id: it.id,
+                  customServiceId: it.customServiceId,
+                  customServiceName: it.customService.name,
+                  offerUnits: it.offerUnits,
+                  sort: it.sort,
                 })),
               })),
               categories: categories.map((c) => ({

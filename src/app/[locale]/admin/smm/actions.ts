@@ -244,6 +244,58 @@ export async function removeServiceFromSmmClientCategoryAction(input: { itemId: 
   return { ok: true as const };
 }
 
+export async function addManualServiceToSmmClientCategoryAction(input: {
+  categoryId: string;
+  customServiceId: string;
+  offerUnits: number;
+  sort: number;
+}) {
+  await requireSmmAdmin();
+  const categoryId = String(input.categoryId ?? "").trim();
+  const customServiceId = String(input.customServiceId ?? "").trim();
+  if (!categoryId || !customServiceId) {
+    return { ok: false as const, message: "Category and manual service are required." };
+  }
+
+  const offerUnits = Math.floor(Number(input.offerUnits) || 0);
+  if (offerUnits <= 0) return { ok: false as const, message: "Units must be greater than 0." };
+
+  try {
+    await prisma.smmClientCategoryManualItem.create({
+      data: {
+        categoryId,
+        customServiceId,
+        offerUnits,
+        sort: Number(input.sort) || 0,
+      },
+      select: { id: true },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("Unique constraint") || msg.includes("Unique") || msg.includes("P2002")) {
+      return {
+        ok: false as const,
+        message: "This manual service is already assigned to this featured offer.",
+      };
+    }
+    return { ok: false as const, message: "Failed to add manual service." };
+  }
+
+  revalidatePath("/admin/smm");
+  revalidatePath("/trust");
+  return { ok: true as const };
+}
+
+export async function removeManualServiceFromSmmClientCategoryAction(input: { itemId: string }) {
+  await requireSmmAdmin();
+  const itemId = String(input.itemId ?? "").trim();
+  if (!itemId) return { ok: false as const, message: "Missing item id." };
+  await prisma.smmClientCategoryManualItem.delete({ where: { id: itemId } });
+  revalidatePath("/admin/smm");
+  revalidatePath("/trust");
+  return { ok: true as const };
+}
+
 export async function issueResellerApiKeyAction(input: { email: string; discountPct: number }) {
   await requireRole("PLATFORM_ADMIN");
 
