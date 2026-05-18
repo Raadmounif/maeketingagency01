@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
+import { getLocale } from "next-intl/server";
 import { SiteHeader } from "@/components/SiteHeader";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { resolveContactUsHref } from "@/lib/site-settings";
 import { parseWalletSypPerUsd } from "@/lib/wallet-money";
 
 export async function SiteHeaderServer() {
@@ -37,7 +39,8 @@ export async function SiteHeaderServer() {
     !userId || !dbAvailable ? null : (walletRow?.balanceCents ?? 0);
   const walletBalanceSyp = !userId || !dbAvailable ? null : (walletRow?.balanceSyp ?? 0);
   const walletSypPerUsd = parseWalletSypPerUsd(site?.walletSypPerUsd);
-  const contactUsUrl = site?.contactUsUrl?.trim() || null;
+  const locale = (await getLocale()) === "ar" ? "ar" : "en";
+  const contactUsUrl = await resolveContactUsHref(locale);
 
   return (
     <SiteHeader

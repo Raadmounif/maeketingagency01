@@ -1,3 +1,5 @@
+import { SERVICE_PAGE_CATALOG } from "@/lib/service-pages";
+
 /** Marketing + `/services` — add entries here as new modules ship. */
 export type ServiceCatalogEntry = {
   slug: string;
@@ -6,6 +8,7 @@ export type ServiceCatalogEntry = {
 };
 
 export const serviceCatalog: ReadonlyArray<ServiceCatalogEntry> = [
+  ...SERVICE_PAGE_CATALOG,
   {
     slug: "trust",
     name: "SMM Growth",

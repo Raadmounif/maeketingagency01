@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 import { requirePlatformAdmin } from "@/lib/rbac";
 
+import { ServicePagesForm } from "./service-pages-form";
 import { SiteSectionsForm, SocialLinksForm } from "./view";
 
 
@@ -158,6 +159,18 @@ export default async function AdminSettingsPage() {
 
           </CollapsibleSection>
 
+        </div>
+
+        <div className="mt-8">
+          <CollapsibleSection id="admin-settings-service-pages" title="Service pages">
+            <p className="mt-2 max-w-2xl text-sm text-[#2C4E7A]/85">
+              Marketing, IT Solutions, and Graphic Design each have their own page. Edit text,
+              hero media, photo gallery, and book-a-call button per language.
+            </p>
+            <div className="mt-4">
+              <ServicePagesForm marketingContent={settings?.marketingContent ?? null} />
+            </div>
+          </CollapsibleSection>
         </div>
 
       </div>

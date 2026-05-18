@@ -4,6 +4,12 @@ import {
   normalizeAdvertisingMediaKind,
   normalizeAdvertisingMediaUrl,
 } from "@/lib/advertising-media";
+import {
+  SERVICE_PAGE_CATALOG,
+  type ServicePageContent,
+  type ServicePageGalleryItem,
+  type ServicePageSlug,
+} from "@/lib/service-pages";
 
 export type SocialLinks = {
   twitterUrl?: string | null;
@@ -238,6 +244,213 @@ export async function getMarketingContent(locale: "en" | "ar"): Promise<Marketin
   };
 
   return merged;
+}
+
+const SERVICE_PAGE_DEFAULTS: Record<ServicePageSlug, Record<"en" | "ar", ServicePageContent>> = {
+  marketing: {
+    en: {
+      kicker: "Marketing",
+      title: "Growth that fits your brand.",
+      subtitle: "Campaigns, positioning, and measurable outcomes—without losing clarity.",
+      body: "We help you plan, launch, and refine marketing programs that connect with the right audience and compound over time.",
+      bullets: [
+        "Brand and campaign strategy aligned to business goals",
+        "Channel planning with clear ownership and cadence",
+        "Reporting that stakeholders can act on",
+      ],
+      mediaUrl: null,
+      mediaKind: null,
+      gallery: [],
+      bookCallLabel: "Book a call",
+      bookCallUrl: null,
+    },
+    ar: {
+      kicker: "التسويق",
+      title: "نمو يتماشى مع علامتك.",
+      subtitle: "حملات وموضع ونتائج قابلة للقياس—مع وضوح في التنفيذ.",
+      body: "نساعدك على تخطيط وإطلاق وتحسين برامج تسويقية تصل للجمهور المناسب وتتراكم أثرًا مع الوقت.",
+      bullets: [
+        "استراتيجية العلامة والحملات بما يخدم أهداف العمل",
+        "تخطيط القنوات مع ملكية واضحة وإيقاع ثابت",
+        "تقارير يمكن لأصحاب المصلحة الاعتماد عليها",
+      ],
+      mediaUrl: null,
+      mediaKind: null,
+      gallery: [],
+      bookCallLabel: "احجز مكالمة",
+      bookCallUrl: null,
+    },
+  },
+  "it-solutions": {
+    en: {
+      kicker: "IT Solutions",
+      title: "Systems you can rely on.",
+      subtitle: "From integrations to day-to-day operations—we keep complexity manageable.",
+      body: "We design and deliver IT solutions that support your team: stable foundations, sensible automation, and support when it matters.",
+      bullets: [
+        "Cloud and on-prem assessments with clear recommendations",
+        "Integration and workflow design",
+        "Ongoing support options scaled to your needs",
+      ],
+      mediaUrl: null,
+      mediaKind: null,
+      gallery: [],
+      bookCallLabel: "Book a call",
+      bookCallUrl: null,
+    },
+    ar: {
+      kicker: "حلول تقنية",
+      title: "أنظمة يمكن الاعتماد عليها.",
+      subtitle: "من التكامل إلى التشغيل اليومي—نُبقي التعقيد تحت السيطرة.",
+      body: "نصمم وننفّذ حلولًا تقنية تدعم فريقك: أساس مستقر، أتمتة معقولة، ودعم عند الحاجة.",
+      bullets: [
+        "تقييم سحابي ومحلي مع توصيات واضحة",
+        "تصميم التكامل وسير العمل",
+        "خيارات دعم مستمرة بما يناسب احتياجك",
+      ],
+      mediaUrl: null,
+      mediaKind: null,
+      gallery: [],
+      bookCallLabel: "احجز مكالمة",
+      bookCallUrl: null,
+    },
+  },
+  "graphic-design": {
+    en: {
+      kicker: "Graphic Design",
+      title: "Design that carries your story.",
+      subtitle: "Identity, campaigns, and assets—consistent across every touchpoint.",
+      body: "We create visual systems and deliverables that feel cohesive, professional, and ready for production.",
+      bullets: [
+        "Brand identity and guideline kits",
+        "Social, print, and presentation assets",
+        "Iterative reviews with fast turnaround",
+      ],
+      mediaUrl: null,
+      mediaKind: null,
+      gallery: [],
+      bookCallLabel: "Book a call",
+      bookCallUrl: null,
+    },
+    ar: {
+      kicker: "التصميم الجرافيكي",
+      title: "تصميم يحمل قصتك.",
+      subtitle: "هوية وحملات وأصول—متسقة في كل نقطة تواصل.",
+      body: "نبني أنظمة بصرية ومخرجات تبدو متماسكة واحترافية وجاهزة للإنتاج.",
+      bullets: [
+        "هوية العلامة ودليل الاستخدام",
+        "أصول سوشيال وطباعة وعروض",
+        "مراجعات سريعة مع تسليم في وقت قصير",
+      ],
+      mediaUrl: null,
+      mediaKind: null,
+      gallery: [],
+      bookCallLabel: "احجز مكالمة",
+      bookCallUrl: null,
+    },
+  },
+};
+
+function asGallery(v: unknown): ServicePageGalleryItem[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const r = item as Record<string, unknown>;
+      const url = asString(r.url).trim();
+      if (!url) return null;
+      return { url, caption: asString(r.caption).trim() };
+    })
+    .filter(Boolean) as ServicePageGalleryItem[];
+}
+
+function localeServicePagesRoot(
+  locale: "en" | "ar",
+  marketingContent: unknown,
+): Record<string, unknown> {
+  const root =
+    typeof marketingContent === "object" && marketingContent !== null
+      ? (marketingContent as Record<string, unknown>)
+      : {};
+  const byLocale =
+    typeof root[locale] === "object" && root[locale] !== null
+      ? (root[locale] as Record<string, unknown>)
+      : {};
+  return typeof byLocale.servicePages === "object" && byLocale.servicePages !== null
+    ? (byLocale.servicePages as Record<string, unknown>)
+    : {};
+}
+
+export async function getServicePageContent(
+  slug: ServicePageSlug,
+  locale: "en" | "ar",
+): Promise<ServicePageContent> {
+  const defaults = SERVICE_PAGE_DEFAULTS[slug][locale];
+  const s = await getSiteSettings();
+  const pageRaw = localeServicePagesRoot(locale, s?.marketingContent)[slug];
+  const page =
+    typeof pageRaw === "object" && pageRaw !== null
+      ? (pageRaw as Record<string, unknown>)
+      : {};
+
+  const mediaUrlRaw = asString(page.mediaUrl).trim();
+  const mediaUrl = mediaUrlRaw ? normalizeAdvertisingMediaUrl(mediaUrlRaw) : null;
+  const mediaKind = normalizeAdvertisingMediaKind(page.mediaKind);
+
+  const bookCallUrlRaw = asString(page.bookCallUrl).trim();
+  const bookCallUrl = bookCallUrlRaw ? normalizeHeroLink(bookCallUrlRaw) : null;
+
+  const bullets = asStringArray(page.bullets).map((x) => x.trim()).filter(Boolean);
+  const gallery = asGallery(page.gallery);
+
+  return {
+    kicker: asString(page.kicker).trim() || defaults.kicker,
+    title: asString(page.title).trim() || defaults.title,
+    subtitle: asString(page.subtitle).trim() || defaults.subtitle,
+    body: asString(page.body).trim() || defaults.body,
+    bullets: bullets.length ? bullets : defaults.bullets,
+    mediaUrl: mediaUrl ?? defaults.mediaUrl,
+    mediaKind: mediaKind ?? defaults.mediaKind,
+    gallery: gallery.length ? gallery : defaults.gallery,
+    bookCallLabel: asString(page.bookCallLabel).trim() || defaults.bookCallLabel,
+    bookCallUrl: bookCallUrl ?? defaults.bookCallUrl,
+  };
+}
+
+/** Header / book-a-call link: site setting, else mailto from locale contact email. */
+export async function resolveContactUsHref(locale: "en" | "ar"): Promise<string> {
+  const s = await getSiteSettings();
+  const raw = s?.contactUsUrl?.trim() ?? "";
+  if (raw) {
+    const link = normalizeHeroLink(raw);
+    if (link) return link;
+  }
+
+  const mc = await getMarketingContent(locale);
+  const email = mc.contact.email.trim();
+  if (email.length > 0) {
+    return `mailto:${email}`;
+  }
+
+  return "mailto:hello@palmyrashift.com";
+}
+
+export async function getContactUsUrl(locale: "en" | "ar"): Promise<string> {
+  return resolveContactUsHref(locale);
+}
+
+export async function resolveServicePageBookCallUrl(
+  slug: ServicePageSlug,
+  locale: "en" | "ar",
+): Promise<{ label: string; href: string } | null> {
+  const page = await getServicePageContent(slug, locale);
+  const href = page.bookCallUrl ?? (await getContactUsUrl(locale));
+  return { label: page.bookCallLabel, href };
+}
+
+/** Display names for catalog (static fallbacks; pages use CMS titles in hero). */
+export function servicePageCatalogEntry(slug: ServicePageSlug) {
+  return SERVICE_PAGE_CATALOG.find((e) => e.slug === slug)!;
 }
 
 export async function getHeroBoard(locale: "en" | "ar"): Promise<HeroBoard> {

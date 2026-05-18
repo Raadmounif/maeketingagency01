@@ -47,3 +47,5 @@ deploy.zip
 # client-uploaded payment proof images (local runtime only)
 /public/uploads/payment-proofs/*
 !/public/uploads/payment-proofs/.gitkeep
+/public/uploads/service-pages/*
+!/public/uploads/service-pages/.gitkeep

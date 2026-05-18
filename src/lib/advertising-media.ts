@@ -6,6 +6,8 @@ export type ParsedAdvertisingMedia =
   | { variant: "video"; src: string }
   | { variant: "image"; src: string };
 
+import { isValidServicePageMediaUrl } from "@/lib/uploads/service-page-media-url";
+
 function isHttpsUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
@@ -13,6 +15,11 @@ function isHttpsUrl(raw: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isAllowedMediaSrc(raw: string): boolean {
+  if (isValidServicePageMediaUrl(raw)) return true;
+  return isHttpsUrl(raw);
 }
 
 /** YouTube watch / short / embed → embed player URL. */
@@ -61,7 +68,7 @@ export function isDirectVideoFileUrl(url: string): boolean {
 
 export function normalizeAdvertisingMediaUrl(raw: unknown): string | null {
   const s = String(raw ?? "").trim();
-  if (!s || !isHttpsUrl(s)) return null;
+  if (!s || !isAllowedMediaSrc(s)) return null;
   return s;
 }
 
@@ -79,7 +86,7 @@ export function parseAdvertisingMedia(
   kind: AdvertisingMediaKind | null | undefined,
 ): ParsedAdvertisingMedia {
   const src = String(url ?? "").trim();
-  if (!src || !isHttpsUrl(src)) return { variant: "none" };
+  if (!src || !isAllowedMediaSrc(src)) return { variant: "none" };
 
   const k: AdvertisingMediaKind = kind === "image" || kind === "video" ? kind : "auto";
 

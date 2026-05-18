@@ -7,6 +7,11 @@ function iconForSlug(slug: string) {
   switch (slug) {
     case "trust":
       return IconShield;
+    case "marketing":
+    case "graphic-design":
+      return IconLayers;
+    case "it-solutions":
+      return IconShield;
     default:
       return IconLayers;
   }

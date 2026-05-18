@@ -76,9 +76,12 @@
   },
   "servicesPage": {
     "title": "Services",
-    "subtitlePrefix": "Pick a service to explore its page under your domain path, for example",
+    "subtitlePrefix": "Pick a service to explore its dedicated page.",
     "view": "View",
     "route": "Route"
+  },
+  "servicePage": {
+    "backToServices": "All services"
   },
   "adminSmm": {
     "page": {

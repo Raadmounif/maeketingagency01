@@ -10,7 +10,7 @@ export function safeInternalPathAfterAuth(next: string | null): string {
   if (t.includes("://") || t.includes("\\") || t.includes("@")) return "/dashboard";
 
   const allowed =
-    /^\/(?:$|dashboard(?:\/.*)?|admin(?:\/.*)?|services(?:\/.*)?|trust(?:\/.*)?|login(?:\/.*)?|register(?:\/.*)?)$/;
+    /^\/(?:$|dashboard(?:\/.*)?|admin(?:\/.*)?|services(?:\/.*)?|trust(?:\/.*)?|marketing(?:\/.*)?|it-solutions(?:\/.*)?|graphic-design(?:\/.*)?|login(?:\/.*)?|register(?:\/.*)?)$/;
 
   return allowed.test(t) ? t : "/dashboard";
 }

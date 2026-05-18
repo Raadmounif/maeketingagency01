@@ -1,7 +1,8 @@
 import { Link } from "@/i18n/routing";
 import { getLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
-import { getMarketingContent, getSocialLinks } from "@/lib/site-settings";
+import { SERVICE_PAGE_CATALOG } from "@/lib/service-pages";
+import { getMarketingContent, getSocialLinks, resolveContactUsHref } from "@/lib/site-settings";
 import {
   IconFacebook,
   IconInstagram,
@@ -14,12 +15,18 @@ export async function SiteFooter() {
   const locale = (await getLocale()) as "en" | "ar";
   const navT = await getTranslations("nav");
   const footT = await getTranslations("marketing.footer");
-  const mc = await getMarketingContent(locale);
-  const social = await getSocialLinks();
+  const [mc, social, contactUsHref] = await Promise.all([
+    getMarketingContent(locale),
+    getSocialLinks(),
+    resolveContactUsHref(locale),
+  ]);
+  const contactExternal =
+    contactUsHref.startsWith("http://") || contactUsHref.startsWith("https://");
   const nav = [
     { href: "/#services", label: navT("services") },
     { href: "/#about", label: navT("about") },
     { href: "/services", label: footT("serviceDirectory") },
+    ...SERVICE_PAGE_CATALOG.map((s) => ({ href: `/${s.slug}`, label: s.name })),
     { href: "/trust", label: navT("trustGrowth") },
   ];
   type Item = {
@@ -87,6 +94,17 @@ export async function SiteFooter() {
             {mc.contact.title}
           </div>
           <ul className="mt-3 space-y-1 sm:mt-4">
+            <li>
+              <a
+                href={contactUsHref}
+                {...(contactExternal
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+                className="inline-flex min-h-11 items-center rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
+              >
+                {navT("contactUs")}
+              </a>
+            </li>
             <li>
               <a
                 href={`mailto:${mc.contact.email}`}

@@ -76,9 +76,12 @@
   },
   "servicesPage": {
     "title": "الخدمات",
-    "subtitlePrefix": "اختر خدمة لاستعراض صفحتها ضمن مسار نطاقك، مثل",
+    "subtitlePrefix": "اختر خدمة لاستعراض صفحتها المخصصة.",
     "view": "عرض",
     "route": "المسار"
+  },
+  "servicePage": {
+    "backToServices": "كل الخدمات"
   },
   "adminSmm": {
     "page": {

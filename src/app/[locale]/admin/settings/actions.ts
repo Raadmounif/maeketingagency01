@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import {
+  isServicePageSlug,
+  SERVICE_PAGE_SLUGS,
+  type ServicePageSlug,
+} from "@/lib/service-pages";
+import { normalizeServicePageMediaUrl } from "@/lib/uploads/service-page-media-url";
+import { saveServicePageImage } from "@/lib/uploads/service-page-media";
 
 type Input = {
   twitterUrl?: string;
@@ -198,6 +205,122 @@ export async function updateMarketingContentAction(formData: FormData) {
     create: { id: 1, marketingContent: next as unknown as Prisma.InputJsonValue },
     update: { marketingContent: next as unknown as Prisma.InputJsonValue },
   });
+
+  revalidatePath("/");
+  for (const slug of SERVICE_PAGE_SLUGS) {
+    revalidatePath(`/${slug}`);
+  }
+  revalidatePath("/services");
+
+  return { ok: true as const };
+}
+
+function parseGalleryLines(lines: string[]) {
+  return lines
+    .map((line) => {
+      const parts = line.split("|").map((p) => p.trim());
+      const url = parts[0] ?? "";
+      if (!url) return null;
+      const normalized = normalizeServicePageMediaUrl(url);
+      if (!normalized) return null;
+      return { url: normalized, caption: parts[1] ?? "" };
+    })
+    .filter(Boolean) as Array<{ url: string; caption: string }>;
+}
+
+export async function uploadServicePagePhotoAction(formData: FormData) {
+  await requireRole("PLATFORM_ADMIN");
+
+  const localeRaw = String(formData.get("locale") ?? "").trim();
+  const locale = localeRaw === "ar" ? "ar" : "en";
+  const slugRaw = String(formData.get("slug") ?? "").trim();
+  if (!isServicePageSlug(slugRaw)) {
+    return { ok: false as const, message: "Invalid service page." };
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false as const, message: "Choose an image to upload." };
+  }
+
+  return saveServicePageImage(file, slugRaw as ServicePageSlug, locale);
+}
+
+export async function updateServicePagesContentAction(formData: FormData) {
+  await requireRole("PLATFORM_ADMIN");
+
+  const current = await prisma.siteSettings.findUnique({ where: { id: 1 } });
+  const existing = (current?.marketingContent ?? {}) as MarketingContent;
+
+  const locales: MarketingLocale[] = ["en", "ar"];
+  const next: MarketingContent = { ...existing };
+
+  for (const locale of locales) {
+    const existingLocale = existing?.[locale];
+    const baseLocale = isRecord(existingLocale) ? existingLocale : {};
+    const existingServicePages = isRecord(baseLocale.servicePages)
+      ? (baseLocale.servicePages as Record<string, unknown>)
+      : {};
+
+    const servicePages: Record<string, unknown> = { ...existingServicePages };
+
+    for (const slug of SERVICE_PAGE_SLUGS) {
+      const prefix = `sp_${locale}_${slug}_`;
+      const mediaUrlRaw = String(formData.get(`${prefix}mediaUrl`) ?? "").trim();
+      const mediaUrl = normalizeServicePageMediaUrl(formData.get(`${prefix}mediaUrl`));
+      if (mediaUrlRaw && !mediaUrl) {
+        return {
+          ok: false as const,
+          message: `Invalid hero media for ${slug} (${locale.toUpperCase()}). Upload an image or use a valid URL.`,
+        };
+      }
+
+      const bookCallUrlRaw = String(formData.get(`${prefix}bookCallUrl`) ?? "").trim();
+      const bookCallUrl = normOptionalHttpUrl(formData.get(`${prefix}bookCallUrl`));
+      if (bookCallUrlRaw && !bookCallUrl) {
+        return {
+          ok: false as const,
+          message: `Invalid book-a-call URL for ${slug} (${locale.toUpperCase()}).`,
+        };
+      }
+
+      const mediaKindRaw = normText(formData.get(`${prefix}mediaKind`)).toLowerCase();
+      const mediaKind =
+        mediaKindRaw === "image" || mediaKindRaw === "video" || mediaKindRaw === "auto"
+          ? mediaKindRaw
+          : "";
+
+      servicePages[slug] = {
+        kicker: normText(formData.get(`${prefix}kicker`)),
+        title: normText(formData.get(`${prefix}title`)),
+        subtitle: normText(formData.get(`${prefix}subtitle`)),
+        body: normText(formData.get(`${prefix}body`)),
+        bullets: normLines(formData.get(`${prefix}bullets`)),
+        mediaUrl,
+        mediaKind,
+        gallery: parseGalleryLines(normLines(formData.get(`${prefix}gallery`))),
+        bookCallLabel: normText(formData.get(`${prefix}bookCallLabel`)),
+        bookCallUrl,
+      };
+    }
+
+    next[locale] = {
+      ...baseLocale,
+      servicePages,
+    };
+  }
+
+  await prisma.siteSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1, marketingContent: next as unknown as Prisma.InputJsonValue },
+    update: { marketingContent: next as unknown as Prisma.InputJsonValue },
+  });
+
+  revalidatePath("/");
+  for (const slug of SERVICE_PAGE_SLUGS) {
+    revalidatePath(`/${slug}`);
+  }
+  revalidatePath("/services");
 
   return { ok: true as const };
 }

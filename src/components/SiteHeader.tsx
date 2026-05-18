@@ -14,6 +14,30 @@ import {
   walletSpendableUsdCents,
 } from "@/lib/wallet-money";
 
+function ContactUsLink({
+  href,
+  className,
+  onClick,
+  children,
+}: {
+  href: string;
+  className?: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  const external = href.startsWith("http://") || href.startsWith("https://");
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </a>
+  );
+}
+
 function MenuIcon({ open }: { open: boolean }) {
   return (
     <span className="relative block h-5 w-6" aria-hidden>
@@ -44,7 +68,7 @@ export function SiteHeader(props?: {
   walletBalanceSyp: number | null;
   walletSypPerUsd: number;
   walletDisplayCurrency: "USD" | "SYP";
-  contactUsUrl?: string | null;
+  contactUsUrl: string;
 }) {
   const pathname = usePathname();
   const [navHydrated, setNavHydrated] = useState(false);
@@ -93,9 +117,9 @@ export function SiteHeader(props?: {
   const walletBalanceSyp = props?.walletBalanceSyp ?? null;
   const walletSypPerUsd = props?.walletSypPerUsd ?? 0;
   const walletDisplayCurrency = props?.walletDisplayCurrency === "SYP" ? "SYP" : "USD";
-  const contactUsUrl = props?.contactUsUrl?.trim() ?? "";
-  const contactLinkClass =
-    "inline-flex items-center rounded-xl px-3 py-2 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white";
+  const contactUsUrl = props?.contactUsUrl?.trim() ?? "mailto:hello@palmyrashift.com";
+  const contactBtnClass =
+    "inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-white/20 active:bg-white/25";
 
   const welcomeName = (() => {
     const u = data?.user;
@@ -227,19 +251,12 @@ export function SiteHeader(props?: {
               {l.label}
             </Link>
           ))}
-          {contactUsUrl ? (
-            <a
-              href={contactUsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={contactLinkClass}
-            >
-              {t("nav.contactUs")}
-            </a>
-          ) : null}
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <ContactUsLink href={contactUsUrl} className={`${contactBtnClass} md:hidden`}>
+            {t("nav.contactUs")}
+          </ContactUsLink>
           <button
             type="button"
             onClick={switchLocale}
@@ -251,6 +268,9 @@ export function SiteHeader(props?: {
           </button>
 
           <div className="hidden items-center gap-2 md:flex">
+            <ContactUsLink href={contactUsUrl} className={contactBtnClass}>
+              {t("nav.contactUs")}
+            </ContactUsLink>
             {data?.user ? (
               <>
                 <span
@@ -446,20 +466,16 @@ export function SiteHeader(props?: {
                 </span>
               </Link>
             ))}
-            {contactUsUrl ? (
-              <a
-                href={contactUsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={navLinkClass(contactUsUrl, true)}
-                onClick={() => setMenuOpen(false)}
-              >
-                <span>{t("nav.contactUs")}</span>
-                <span aria-hidden className="text-white/40">
-                  ↗
-                </span>
-              </a>
-            ) : null}
+            <ContactUsLink
+              href={contactUsUrl}
+              className={navLinkClass(contactUsUrl, true)}
+              onClick={() => setMenuOpen(false)}
+            >
+              <span>{t("nav.contactUs")}</span>
+              <span aria-hidden className="text-white/40">
+                {contactUsUrl.startsWith("mailto:") ? "✉" : "↗"}
+              </span>
+            </ContactUsLink>
           </nav>
 
           <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 pt-4">

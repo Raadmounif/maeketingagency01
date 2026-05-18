@@ -95,7 +95,7 @@ export function SocialLinksForm({ defaults }: { defaults: Defaults }) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-[#2C4E7A]/75">
-          Leave a field empty to hide that icon in the footer. Contact link appears in the site header when set.
+          Leave a field empty to hide that icon in the footer. If Contact us link is empty, the header uses your site contact email (mailto).
         </div>
         <button
           type="submit"
