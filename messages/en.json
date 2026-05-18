@@ -320,6 +320,17 @@
       "approved": "Approved requests",
       "paymentSettings": "Payment settings",
       "backToAdmin": "Back to Admin"
+    },
+    "orders": {
+      "manualStatusOrdered": "Ordered",
+      "manualStatusDone": "Done",
+      "offerStatusPending": "Pending",
+      "offerStatusProcessing": "Processing",
+      "offerStatusCompleted": "Completed",
+      "offerStatusFailed": "Failed",
+      "statusUpdateFailed": "Could not update order status.",
+      "changeManualStatus": "Change manual order status for {id}",
+      "changeOfferStatus": "Change offer order status for {id}"
     }
   },
   "dashboardPage": {
@@ -373,7 +384,7 @@
     "paymentStatusApproved": "Approved",
     "paymentStatusRejected": "Rejected",
     "paymentStatusRefunded": "Refunded",
-    "ordersHelp": "API service status updates automatically from the provider. Manual service status is updated by an admin.",
+    "ordersHelp": "API service status updates automatically from the provider. Manual and featured offer statuses are updated by an admin.",
     "orderTableWhen": "When",
     "orderTableType": "Type",
     "orderTableService": "Service",
@@ -383,6 +394,9 @@
     "noOrdersYet": "No service orders yet.",
     "orderTypeApi": "API",
     "orderTypeManual": "Manual",
+    "orderTypeOffer": "Featured offer",
+    "orderOfferItems": "Items: {count}",
+    "orderOfferMoreLinks": "+{count} more links",
     "orderQty": "Qty: {qty}",
     "orderProviderId": "Provider ID: {id}",
     "orderUnits": "Units: {units}",

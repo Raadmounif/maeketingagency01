@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { pillClassForStatus } from "@/components/StatusPill";
 import { PaymentTrackingCode } from "@/components/PaymentTrackingCode";
@@ -75,6 +75,17 @@ type ManualOrderRow = {
   clientNote: string | null;
 };
 
+type OfferOrderRow = {
+  id: string;
+  createdAt: string;
+  offerNameEn: string;
+  offerNameAr: string;
+  itemsCount: number;
+  itemLinks: string[];
+  chargeCents: number;
+  status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+};
+
 function paymentStatusLabel(
   status: PaymentRow["status"],
   t: ReturnType<typeof useTranslations<"dashboardPage">>,
@@ -113,6 +124,22 @@ function apiOrderStatusLabel(
   }
 }
 
+function offerOrderStatusLabel(
+  status: OfferOrderRow["status"],
+  t: ReturnType<typeof useTranslations<"dashboardPage">>,
+) {
+  switch (status) {
+    case "PROCESSING":
+      return t("orderStatusProcessing");
+    case "COMPLETED":
+      return t("orderStatusCompleted");
+    case "FAILED":
+      return t("orderStatusFailed");
+    default:
+      return t("orderStatusPending");
+  }
+}
+
 export default function DashboardClient(props: {
   walletBalanceDisplay: string;
   defaultPaymentCurrency: PaymentAmountCurrency;
@@ -121,9 +148,11 @@ export default function DashboardClient(props: {
   orderedServices: {
     api: ApiOrderRow[];
     manual: ManualOrderRow[];
+    offers: OfferOrderRow[];
   };
 }) {
   const t = useTranslations("dashboardPage");
+  const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [toast, setToast] = useState<FormToast | null>(null);
@@ -199,13 +228,15 @@ export default function DashboardClient(props: {
     const merged: Array<
       | ({ kind: "API" } & ApiOrderRow)
       | ({ kind: "MANUAL" } & ManualOrderRow)
+      | ({ kind: "OFFER" } & OfferOrderRow)
     > = [
       ...props.orderedServices.api.map((o) => ({ kind: "API" as const, ...o })),
       ...props.orderedServices.manual.map((o) => ({ kind: "MANUAL" as const, ...o })),
+      ...props.orderedServices.offers.map((o) => ({ kind: "OFFER" as const, ...o })),
     ];
     merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return merged;
-  }, [props.orderedServices.api, props.orderedServices.manual]);
+  }, [props.orderedServices.api, props.orderedServices.manual, props.orderedServices.offers]);
 
   return (
     <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-8 shadow-sm">
@@ -627,9 +658,19 @@ export default function DashboardClient(props: {
                       {new Date(o.createdAt).toLocaleString()}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">
-                      {o.kind === "API" ? t("orderTypeApi") : t("orderTypeManual")}
+                      {o.kind === "API"
+                        ? t("orderTypeApi")
+                        : o.kind === "MANUAL"
+                          ? t("orderTypeManual")
+                          : t("orderTypeOffer")}
                     </td>
-                    <td className="max-w-[260px] px-3 py-2 text-[#1F3A5F]">{o.serviceName}</td>
+                    <td className="max-w-[260px] px-3 py-2 text-[#1F3A5F]">
+                      {o.kind === "OFFER"
+                        ? locale === "ar"
+                          ? o.offerNameAr
+                          : o.offerNameEn
+                        : o.serviceName}
+                    </td>
                     <td className="px-3 py-2 text-[#2C4E7A]/90">
                       {o.kind === "API" ? (
                         <div className="space-y-0.5">
@@ -643,7 +684,7 @@ export default function DashboardClient(props: {
                               : ""}
                           </div>
                         </div>
-                      ) : (
+                      ) : o.kind === "MANUAL" ? (
                         <div className="space-y-0.5">
                           <div className="max-w-[420px] truncate" title={o.link}>
                             {o.link}
@@ -658,25 +699,49 @@ export default function DashboardClient(props: {
                             })}
                           </div>
                         </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <div className="text-xs text-[#2C4E7A]/75">
+                            {t("orderOfferItems", { count: o.itemsCount })}
+                          </div>
+                          {o.itemLinks.slice(0, 2).map((link, idx) => (
+                            <div key={`${o.id}-${idx}`} className="max-w-[420px] truncate" title={link}>
+                              {link}
+                            </div>
+                          ))}
+                          {o.itemLinks.length > 2 ? (
+                            <div className="text-xs text-[#2C4E7A]/75">
+                              {t("orderOfferMoreLinks", { count: o.itemLinks.length - 2 })}
+                            </div>
+                          ) : null}
+                        </div>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">
-                      {o.kind === "API" ? `$${formatUsd(o.chargeCents)}` : `$${o.totalUsd}`}
+                      {o.kind === "MANUAL" ? `$${o.totalUsd}` : `$${formatUsd(o.chargeCents)}`}
                     </td>
                     <td className="px-3 py-2">
                       <span
                         className={[
                           "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
                           pillClassForStatus(
-                            o.kind === "API" ? o.status : o.status === "DONE" ? "SUCCEEDED" : "ORDERED",
+                            o.kind === "API"
+                              ? o.status
+                              : o.kind === "OFFER"
+                                ? o.status
+                                : o.status === "DONE"
+                                  ? "SUCCEEDED"
+                                  : "ORDERED",
                           ),
                         ].join(" ")}
                       >
                         {o.kind === "API"
                           ? apiOrderStatusLabel(o.status, t)
-                          : o.status === "DONE"
-                            ? t("orderStatusSucceeded")
-                            : t("orderStatusOrdered")}
+                          : o.kind === "OFFER"
+                            ? offerOrderStatusLabel(o.status, t)
+                            : o.status === "DONE"
+                              ? t("orderStatusSucceeded")
+                              : t("orderStatusOrdered")}
                       </span>
                     </td>
                   </tr>

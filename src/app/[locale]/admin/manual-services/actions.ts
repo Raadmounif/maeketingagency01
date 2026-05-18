@@ -111,5 +111,8 @@ export async function updateCustomServiceOrderStatusAction(input: {
     data: { status: input.status },
   });
   revalidatePath("/admin/manual-services");
+  revalidatePath("/admin/payments-and-orders");
+  revalidatePath("/dashboard");
+  revalidatePath("/admin");
   return { ok: true as const };
 }

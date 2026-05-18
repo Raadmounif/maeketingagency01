@@ -319,6 +319,17 @@
       "approved": "طلبات معتمدة",
       "paymentSettings": "إعدادات الدفع",
       "backToAdmin": "العودة إلى الإدارة"
+    },
+    "orders": {
+      "manualStatusOrdered": "مطلوب",
+      "manualStatusDone": "منجز",
+      "offerStatusPending": "معلّق",
+      "offerStatusProcessing": "قيد التنفيذ",
+      "offerStatusCompleted": "مكتمل",
+      "offerStatusFailed": "فشل",
+      "statusUpdateFailed": "تعذّر تحديث حالة الطلب.",
+      "changeManualStatus": "تغيير حالة الطلب اليدوي {id}",
+      "changeOfferStatus": "تغيير حالة طلب العرض {id}"
     }
   },
   "dashboardPage": {
@@ -372,7 +383,7 @@
     "paymentStatusApproved": "معتمد",
     "paymentStatusRejected": "مرفوض",
     "paymentStatusRefunded": "مسترجع",
-    "ordersHelp": "تُحدَّث حالة خدمات الـ API تلقائيًا من المزوّد. تُحدَّث حالة الخدمات اليدوية من قبل الإدارة.",
+    "ordersHelp": "تُحدَّث حالة خدمات الـ API تلقائيًا من المزوّد. تُحدَّث حالة الخدمات اليدوية والعروض المميزة من قبل الإدارة.",
     "orderTableWhen": "التاريخ",
     "orderTableType": "النوع",
     "orderTableService": "الخدمة",
@@ -382,6 +393,9 @@
     "noOrdersYet": "لا توجد طلبات خدمات بعد.",
     "orderTypeApi": "API",
     "orderTypeManual": "يدوي",
+    "orderTypeOffer": "عرض مميز",
+    "orderOfferItems": "العناصر: {count}",
+    "orderOfferMoreLinks": "+{count} روابط إضافية",
     "orderQty": "الكمية: {qty}",
     "orderProviderId": "رقم المزوّد: {id}",
     "orderUnits": "الوحدات: {units}",

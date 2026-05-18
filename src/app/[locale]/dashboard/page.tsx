@@ -95,6 +95,17 @@ export default async function DashboardPage() {
     },
   });
 
+  const offerOrders = await prisma.smmOfferOrder.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    include: {
+      category: { select: { nameEn: true, nameAr: true } },
+      items: { select: { link: true } },
+      manualItems: { select: { link: true } },
+    },
+  });
+
   return (
     <main className="flex-1 bg-white px-4 py-12 md:py-16">
       <div className="mx-auto w-full max-w-6xl">
@@ -142,6 +153,16 @@ export default async function DashboardPage() {
               unitPriceUsd: o.service.unitPriceUsd.toString(),
               status: o.status,
               clientNote: o.clientNote,
+            })),
+            offers: offerOrders.map((o) => ({
+              id: o.id,
+              createdAt: o.createdAt.toISOString(),
+              offerNameEn: o.category.nameEn,
+              offerNameAr: o.category.nameAr,
+              itemsCount: o.items.length + o.manualItems.length,
+              itemLinks: [...o.items.map((i) => i.link), ...o.manualItems.map((i) => i.link)],
+              chargeCents: o.chargeCents,
+              status: o.status,
             })),
           }}
         />
