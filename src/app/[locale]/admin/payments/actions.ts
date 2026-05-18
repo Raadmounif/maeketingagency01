@@ -1,11 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { parseOptionalMinSyp, parseOptionalMinUsdDollars } from "@/lib/payment-method-minimum";
 import { prisma } from "@/lib/prisma";
 import { revalidatePaymentPaths } from "@/lib/revalidate-payment-paths";
 import { requireRole } from "@/lib/rbac";
 import { paymentRequestIsSyp } from "@/lib/wallet-money";
-import { creditWallet, debitWallet, debitWalletSyp } from "@/lib/wallet";
+import { creditWallet } from "@/lib/wallet";
 
 async function requirePaymentsAdmin() {
   await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
@@ -177,13 +178,13 @@ export async function refundPaymentRequestAction(input: { id: string }) {
 
   await prisma.$transaction(async (tx) => {
     if (paymentRequestIsSyp(req)) {
-      await debitWalletSyp(tx, {
+      await creditWallet(tx, {
         userId: req.userId,
         amountSyp: req.amountSyp,
         note: `Refund payment (${req.id})`,
       });
     } else {
-      await debitWallet(tx, {
+      await creditWallet(tx, {
         userId: req.userId,
         amountCents: req.amountCents,
         note: `Refund payment (${req.id})`,
@@ -200,6 +201,42 @@ export async function refundPaymentRequestAction(input: { id: string }) {
   });
 
   revalidatePaymentPaths();
+  return { ok: true as const };
+}
+
+export async function updateWalletExchangeRateAction(formData: FormData) {
+  await requirePaymentsAdmin();
+
+  const raw = String(formData.get("walletSypPerUsd") ?? "").trim();
+  if (!raw.length) {
+    await prisma.siteSettings.upsert({
+      where: { id: 1 },
+      create: { id: 1, walletSypPerUsd: null },
+      update: { walletSypPerUsd: null },
+    });
+    revalidatePaymentPaths();
+    revalidatePath("/");
+    revalidatePath("/trust");
+    return { ok: true as const };
+  }
+
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    return {
+      ok: false as const,
+      message: "Enter a positive number (Syrian pounds per 1.00 USD), or leave empty to clear the rate.",
+    };
+  }
+
+  await prisma.siteSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1, walletSypPerUsd: n },
+    update: { walletSypPerUsd: n },
+  });
+
+  revalidatePaymentPaths();
+  revalidatePath("/");
+  revalidatePath("/trust");
   return { ok: true as const };
 }
 

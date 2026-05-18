@@ -84,7 +84,7 @@
     "page": {
       "crumb": "الإدارة",
       "title": "نمو SMM",
-      "subtitle": "زامن كتالوج المزوّد، واضبط نسب الربح، وفعّل/عطّل الخدمات للعملاء والموزعين. الوضع الافتراضي: إيقاف.",
+      "subtitle": "زامن كتالوج المزوّد، واضبط نسب الربح، وفعّل/عطّل الخدمات للعملاء. الوضع الافتراضي: إيقاف.",
       "backToAdmin": "العودة إلى الإدارة",
       "openSmmGrowth": "فتح صفحة SMM Growth"
     },
@@ -92,7 +92,6 @@
       "ads": "لوحة إعلانات SMM Growth",
       "offers": "العروض المميزة",
       "manual": "الخدمات اليدوية (مخصصة)",
-      "reseller": "واجهة الموزع وخصم الرصيد",
       "provider": "المزوّد والتسعير",
       "catalog": "الكتالوج وظهور الخدمات"
     },
@@ -112,22 +111,7 @@
       "updatedVisibility": "تم تحديث الظهور.",
       "savedClientCopy": "تم حفظ نص العرض للعميل.",
       "savedApiMarkup": "تم حفظ نسبة ربح API للخدمة.",
-      "issuedResellerKey": "تم إصدار مفتاح API للموزع (يُعرض مرة واحدة).",
-      "creditedWallet": "تم إضافة رصيد للمحفظة.",
       "saved": "تم الحفظ."
-    },
-    "reseller": {
-      "title": "واجهة الموزع (API)",
-      "endpointPrefix": "المسار:",
-      "supportedActions": "الإجراءات المدعومة:",
-      "userEmail": "بريد المستخدم",
-      "resellerDiscount": "خصم الموزع (%)",
-      "issueKey": "إصدار/تجديد مفتاح API",
-      "apiKeyCopyNow": "مفتاح API (انسخ الآن)",
-      "walletCredit": "إضافة رصيد للمحفظة",
-      "amountUsd": "المبلغ (دولار)",
-      "creditWallet": "إضافة الرصيد",
-      "resellerEmailPlaceholder": "reseller@example.com"
     },
     "provider": {
       "baseUrl": "رابط المزوّد الأساسي",
@@ -135,7 +119,6 @@
       "apiKeyHintPrefix": "يتم قراءة مفتاح API من متغير البيئة",
       "defaultMarkup": "نسبة الربح الافتراضية (%)",
       "defaultMarkupHint": "قيمة احتياطية عندما لا توجد نسبة مخصصة للخدمة في الكتالوج. الأولوية للنسب الخاصة بكل خدمة.",
-      "resellerMinMargin": "الحد الأدنى لهامش الموزع (%)",
       "saving": "جارٍ الحفظ...",
       "saveSettings": "حفظ الإعدادات",
       "syncing": "جارٍ المزامنة...",
@@ -143,10 +126,9 @@
     },
     "catalog": {
       "visibilityTitle": "ظهور الخدمات",
-      "visibilityHint": "الوضع الافتراضي: إيقاف. فعّل بشكل منفصل للعملاء والموزعين.",
+      "visibilityHint": "الوضع الافتراضي: إيقاف. فعّل الخدمات للعملاء عند الحاجة.",
       "searchPlaceholder": "ابحث بالاسم أو رقم الخدمة لدى المزوّد…",
       "clients": "العملاء",
-      "resellers": "الموزعون",
       "selectAll": "تحديد الكل",
       "unselectAll": "إلغاء تحديد الكل"
     }
@@ -182,6 +164,14 @@
     }
   },
   "adminOverview": {
+    "title": "الإدارة",
+    "subtitle": "منطقة إدارة المنصة (محمية بنظام الصلاحيات).",
+    "manageUsersRoles": "إدارة المستخدمين والأدوار",
+    "smmGrowth": "نمو التسويق عبر السوشيال",
+    "paymentsAndOrders": "المدفوعات والطلبات",
+    "payments": "إعدادات الدفع",
+    "siteSettings": "إعدادات الموقع",
+    "backToDashboard": "العودة إلى لوحة التحكم",
     "stats": {
       "title": "نظرة عامة وإحصائيات",
       "pendingPayments": "مدفوعات معلّقة",
@@ -204,6 +194,8 @@
       "noCompletedYet": "لا توجد طلبات مكتملة بعد."
       ,
       "allOrdersTitle": "جميع الطلبات",
+      "allOrdersMovedHelp": "راجع طلبات شحن المحفظة وجميع طلبات نمو التسويق في مكان واحد.",
+      "openPaymentsAndOrders": "فتح المدفوعات والطلبات",
       "apiOrders": "طلبات API",
       "manualOrders": "طلبات يدوية",
       "offerOrders": "طلبات العروض المميزة",
@@ -212,6 +204,38 @@
       "details": "التفاصيل",
       "noOrders": "لا توجد طلبات بعد."
     }
+  },
+  "adminUsers": {
+    "registeredUsers": "المستخدمون المسجلون",
+    "showingCount": "يُعرض {count}",
+    "searchPlaceholder": "بحث بالبريد أو الاسم أو الدور…",
+    "email": "البريد",
+    "name": "الاسم",
+    "role": "الدور",
+    "discount": "خصم التسعير",
+    "discountHelp": "حدد نسبة خصم من أسعار نمو التسويق المعروضة لكل حساب (أسعار الكتالوج، الخدمات اليدوية، وحزم العروض). تُطبَّق القيم المحفوظة في زيارتهم التالية لصفحة نمو التسويق.",
+    "discountFor": "خصم لـ {email}",
+    "saveDiscount": "حفظ",
+    "saved": "تم الحفظ",
+    "created": "تاريخ الإنشاء",
+    "discountInvalid": "يجب أن يكون الخصم بين 0 و 100.",
+    "discountUpdateFailed": "تعذّر تحديث الخصم.",
+    "roleUpdateFailed": "تعذّر تحديث الدور.",
+    "password": "كلمة المرور",
+    "resetPassword": "إعادة تعيين كلمة المرور",
+    "newPasswordPlaceholder": "كلمة مرور جديدة",
+    "confirmPasswordPlaceholder": "تأكيد كلمة المرور",
+    "newPasswordFor": "كلمة مرور جديدة لـ {email}",
+    "confirmPasswordFor": "تأكيد كلمة المرور لـ {email}",
+    "setPassword": "تعيين كلمة المرور",
+    "cancel": "إلغاء",
+    "passwordRequired": "أدخل كلمة المرور الجديدة وأكّدها.",
+    "passwordTooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
+    "passwordMismatch": "كلمتا المرور غير متطابقتين.",
+    "passwordResetConfirm": "تعيين كلمة مرور جديدة لـ {email}؟ سيحتاج لاستخدامها عند تسجيل الدخول التالي.",
+    "passwordResetFailed": "تعذّر إعادة تعيين كلمة المرور.",
+    "passwordResetDone": "تم تحديث كلمة المرور",
+    "tip": "تغييرات الدور تسري فورًا. الخصومات تُطبَّق على الأسعار المعروضة لذلك المستخدم فقط. إعادة تعيين كلمة المرور تسري فورًا — شارك كلمة المرور الجديدة مع المستخدم بشكل آمن."
   },
   "adminPayments": {
     "page": {
@@ -222,6 +246,17 @@
       "approved": "معتمد",
       "backToAdmin": "العودة إلى الإدارة",
       "openDashboard": "فتح لوحة التحكم"
+    },
+    "walletExchange": {
+      "sectionTitle": "سعر صرف المحفظة (دولار / ليرة)",
+      "sectionHelp": "حدد عدد الليرات السورية مقابل كل دولار أمريكي. يراه العملاء بجانب رصيدهم؛ وتُستخدمه المحفظة عند الإنفاق من رصيد مختلط بالدولار والليرة.",
+      "fieldLabel": "ليرة سورية (SYP) لكل 1.00 دولار",
+      "placeholder": "مثال: 15000",
+      "help": "اتركه فارغًا لمسح السعر. بدون سعر، يُستخدم رصيد الدولار فقط عند الخصم.",
+      "save": "حفظ سعر الصرف",
+      "saving": "جارٍ الحفظ…",
+      "saved": "تم الحفظ.",
+      "saveFailed": "تعذّر الحفظ."
     },
     "methods": {
       "sectionTitle": "طرق الدفع",
@@ -250,7 +285,7 @@
     },
     "requests": {
       "sectionTitle": "طلبات الدفع",
-      "help": "الموافقة تُضيف رصيدًا لمحفظة المستخدم. يمكن لمسؤول المنصة استرجاع المبلغ (خصم) للطلبات المعتمدة.",
+      "help": "الموافقة تُضيف رصيدًا لمحفظة المستخدم. يمكن لمسؤول المنصة استرجاع الطلبات المعتمدة (إضافة الرصيد للعميل عند الحاجة).",
       "show": "عرض",
       "filterPending": "معلّق",
       "filterApproved": "معتمد",
@@ -271,20 +306,34 @@
       "approvedFlash": "تمت الموافقة.",
       "rejectedFlash": "تم الرفض.",
       "refund": "استرجاع",
-      "refundConfirm": "هل تريد استرجاع هذه الدفعة؟ سيتم خصمها من محفظة المستخدم.",
+      "refundConfirm": "هل تريد استرجاع هذه الدفعة؟ سيتم إضافة المبلغ إلى محفظة العميل.",
       "refundedFlash": "تم الاسترجاع."
+    }
+  },
+  "adminPaymentsAndOrders": {
+    "page": {
+      "crumb": "الإدارة",
+      "title": "المدفوعات والطلبات",
+      "subtitle": "الموافقة على شحن المحفظة ومراجعة طلبات العملاء من نمو التسويق.",
+      "pending": "طلبات معلّقة",
+      "approved": "طلبات معتمدة",
+      "paymentSettings": "إعدادات الدفع",
+      "backToAdmin": "العودة إلى الإدارة"
     }
   },
   "dashboardPage": {
     "title": "لوحة التحكم",
     "walletBalance": "رصيد المحفظة:",
     "addFunds": "إضافة رصيد",
+    "addFundsHelp": "أنشئ طلب دفع. ستكون الحالة <pending>معلّق</pending> حتى تتم موافقة الإدارة.",
+    "method": "طريقة الدفع",
+    "choosePaymentMethod": "اختر طريقة الدفع.",
     "myPayments": "مدفوعاتي",
     "orderedServices": "الخدمات المطلوبة",
     "submitting": "جارٍ الإرسال…",
     "submitRequest": "إرسال الطلب",
-    "paymentCreated": "تم إنشاء طلب الدفع.",
-    "paymentCreatedWithCode": "تم إنشاء طلب الدفع. رمز المرجع: {code}. احفظه للتواصل مع الدعم.",
+    "paymentCreated": "تم إنشاء طلب الدفع. في انتظار موافقة الإدارة — يمكنك متابعة حالة الطلب من قسم مدفوعاتي.",
+    "paymentCreatedWithCode": "تم إنشاء طلب الدفع. رمز المرجع: {code}. احفظه للتواصل مع الدعم. في انتظار موافقة الإدارة — يمكنك متابعة حالة الطلب من قسم مدفوعاتي.",
     "trackingCode": "المرجع",
     "copyCode": "نسخ",
     "copiedCode": "تم النسخ",
@@ -309,7 +358,44 @@
     "minDepositUsd": "الحد الأدنى للإيداع لهذه الطريقة هو {amount}.",
     "minDepositSyp": "الحد الأدنى للإيداع لهذه الطريقة هو {amount}.",
     "methodMinHintUsd": "الحد الأدنى لهذه الطريقة: {amount} (إيداع بالدولار).",
-    "methodMinHintSyp": "الحد الأدنى لهذه الطريقة: {amount} (إيداع بالليرة)."
+    "methodMinHintSyp": "الحد الأدنى لهذه الطريقة: {amount} (إيداع بالليرة).",
+    "tableWhen": "التاريخ",
+    "tableMethod": "الطريقة",
+    "tableAmount": "المبلغ",
+    "tableStatus": "الحالة",
+    "tableNote": "ملاحظة",
+    "tableProof": "الإثبات",
+    "noPaymentsYet": "لا توجد مدفوعات بعد.",
+    "openProof": "فتح",
+    "emptyCell": "—",
+    "paymentStatusPending": "معلّق",
+    "paymentStatusApproved": "معتمد",
+    "paymentStatusRejected": "مرفوض",
+    "paymentStatusRefunded": "مسترجع",
+    "ordersHelp": "تُحدَّث حالة خدمات الـ API تلقائيًا من المزوّد. تُحدَّث حالة الخدمات اليدوية من قبل الإدارة.",
+    "orderTableWhen": "التاريخ",
+    "orderTableType": "النوع",
+    "orderTableService": "الخدمة",
+    "orderTableDetails": "التفاصيل",
+    "orderTableTotal": "الإجمالي",
+    "orderTableStatus": "الحالة",
+    "noOrdersYet": "لا توجد طلبات خدمات بعد.",
+    "orderTypeApi": "API",
+    "orderTypeManual": "يدوي",
+    "orderQty": "الكمية: {qty}",
+    "orderProviderId": "رقم المزوّد: {id}",
+    "orderUnits": "الوحدات: {units}",
+    "orderUnitPrice": "سعر الوحدة: ${price}",
+    "orderNote": "ملاحظة: {note}",
+    "orderStatusOrdered": "مطلوب",
+    "orderStatusSucceeded": "مكتمل",
+    "orderStatusPending": "معلّق",
+    "orderStatusProcessing": "قيد المعالجة",
+    "orderStatusInProgress": "قيد التنفيذ",
+    "orderStatusCompleted": "مكتمل",
+    "orderStatusPartial": "جزئي",
+    "orderStatusCanceled": "ملغى",
+    "orderStatusFailed": "فشل"
   },
   "smmTrust": {
     "hero": {
@@ -327,6 +413,7 @@
       "sectionHelp": "يمكن للجميع اختيار خدمة من النموذج. لإرسال طلب: أنشئ حسابًا، سجّل الدخول، أضِف رصيدًا من لوحة التحكم، وتأكد أن رصيدك يغطي التكلفة التقديرية.",
       "guestBrowseHint": "خدمات الكتالوج (القائمة والاختصارات) والعروض المميزة والخدمات اليدوية تظهر دون تسجيل. الطلب يتطلب حسابًا وتسجيل دخول ورصيدًا كافيًا.",
       "walletBalance": "رصيد المحفظة: {amount}",
+      "accountDiscount": "خصم حسابك: {pct}% من الأسعار المعروضة",
       "estimatedCharge": "التكلفة التقديرية: ${amount} دولار",
       "insufficientBalance": "رصيد محفظتك غير كافٍ لهذا الطلب.",
       "dashboardLink": "افتح لوحة التحكم لإضافة رصيد",

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useLocale } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { Link } from "@/i18n/routing";
 import { PaymentTrackingCode } from "@/components/PaymentTrackingCode";
 import { formatPaymentRequestAmount, type PaymentAmountCurrency } from "@/lib/wallet-money";
 
@@ -75,13 +75,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 export function PaymentsStatsSection({ stats }: { stats: PaymentsStatsSnapshot }) {
   const t = useTranslations("adminOverview.stats");
-  const locale = useLocale();
   const [showApproved, setShowApproved] = useState(false);
-  const [showAllOrders, setShowAllOrders] = useState(false);
-
-  function formatUsd(cents: number) {
-    return (cents / 100).toFixed(2);
-  }
 
   return (
     <CollapsibleSection id="admin-payments-stats" title={t("title")}>
@@ -198,169 +192,19 @@ export function PaymentsStatsSection({ stats }: { stats: PaymentsStatsSnapshot }
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl border border-[#2C4E7A]/10 bg-white p-4">
-        <button
-          type="button"
-          className="flex w-full items-center justify-between gap-3 text-left"
-          onClick={() => setShowAllOrders((v) => !v)}
-          aria-expanded={showAllOrders}
-        >
-          <div className="text-sm font-semibold text-[#1F3A5F]">{t("allOrdersTitle")}</div>
-          <div className="text-xs font-semibold text-[#2C4E7A]/70">{showAllOrders ? "−" : "+"}</div>
-        </button>
-
-        {showAllOrders ? (
-          <div className="mt-4 space-y-6">
-            <div>
-              <div className="text-sm font-semibold text-[#1F3A5F]">{t("apiOrders")}</div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
-                    <tr>
-                      <th className="px-2 py-2">{t("when")}</th>
-                      <th className="px-2 py-2">{t("client")}</th>
-                      <th className="px-2 py-2">{t("serviceOrOffer")}</th>
-                      <th className="px-2 py-2">{t("details")}</th>
-                      <th className="px-2 py-2">{t("amount")}</th>
-                      <th className="px-2 py-2">{t("status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recentOrders.api.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-2 py-3 text-[#2C4E7A]/75">
-                          {t("noOrders")}
-                        </td>
-                      </tr>
-                    ) : (
-                      stats.recentOrders.api.map((o) => (
-                        <tr key={o.id} className="border-t border-[#2C4E7A]/8 align-top">
-                          <td className="whitespace-nowrap px-2 py-2 text-[#2C4E7A]/90">
-                            {new Date(o.createdAt).toLocaleString()}
-                          </td>
-                          <td className="px-2 py-2 text-[#2C4E7A]/90">
-                            <div className="font-medium text-[#1F3A5F]">{o.userEmail}</div>
-                            {o.userName ? <div className="text-xs">{o.userName}</div> : null}
-                          </td>
-                          <td className="px-2 py-2 text-[#1F3A5F]">{o.serviceName}</td>
-                          <td className="px-2 py-2 text-[#2C4E7A]/90">
-                            <div className="max-w-[360px] truncate" title={o.link}>
-                              {o.link}
-                            </div>
-                            <div className="text-xs text-[#2C4E7A]/70">Qty: {o.quantity}</div>
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 font-semibold text-[#1F3A5F]">
-                            ${formatUsd(o.chargeCents)}
-                          </td>
-                          <td className="px-2 py-2 font-semibold">{o.status}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm font-semibold text-[#1F3A5F]">{t("manualOrders")}</div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
-                    <tr>
-                      <th className="px-2 py-2">{t("when")}</th>
-                      <th className="px-2 py-2">{t("client")}</th>
-                      <th className="px-2 py-2">{t("serviceOrOffer")}</th>
-                      <th className="px-2 py-2">{t("details")}</th>
-                      <th className="px-2 py-2">{t("amount")}</th>
-                      <th className="px-2 py-2">{t("status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recentOrders.manual.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-2 py-3 text-[#2C4E7A]/75">
-                          {t("noOrders")}
-                        </td>
-                      </tr>
-                    ) : (
-                      stats.recentOrders.manual.map((o) => (
-                        <tr key={o.id} className="border-t border-[#2C4E7A]/8 align-top">
-                          <td className="whitespace-nowrap px-2 py-2 text-[#2C4E7A]/90">
-                            {new Date(o.createdAt).toLocaleString()}
-                          </td>
-                          <td className="px-2 py-2 text-[#2C4E7A]/90">
-                            <div className="font-medium text-[#1F3A5F]">{o.userEmail}</div>
-                            {o.userName ? <div className="text-xs">{o.userName}</div> : null}
-                          </td>
-                          <td className="px-2 py-2 text-[#1F3A5F]">{o.serviceName}</td>
-                          <td className="px-2 py-2 text-[#2C4E7A]/90">
-                            <div className="max-w-[360px] truncate" title={o.link}>
-                              {o.link}
-                            </div>
-                            <div className="text-xs text-[#2C4E7A]/70">Units: {o.units}</div>
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 font-semibold text-[#1F3A5F]">
-                            ${o.totalUsd}
-                          </td>
-                          <td className="px-2 py-2 font-semibold">{o.status}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-sm font-semibold text-[#1F3A5F]">{t("offerOrders")}</div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
-                    <tr>
-                      <th className="px-2 py-2">{t("when")}</th>
-                      <th className="px-2 py-2">{t("client")}</th>
-                      <th className="px-2 py-2">{t("serviceOrOffer")}</th>
-                      <th className="px-2 py-2">{t("details")}</th>
-                      <th className="px-2 py-2">{t("amount")}</th>
-                      <th className="px-2 py-2">{t("status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recentOrders.offers.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-2 py-3 text-[#2C4E7A]/75">
-                          {t("noOrders")}
-                        </td>
-                      </tr>
-                    ) : (
-                      stats.recentOrders.offers.map((o) => (
-                        <tr key={o.id} className="border-t border-[#2C4E7A]/8 align-top">
-                          <td className="whitespace-nowrap px-2 py-2 text-[#2C4E7A]/90">
-                            {new Date(o.createdAt).toLocaleString()}
-                          </td>
-                          <td className="px-2 py-2 text-[#2C4E7A]/90">
-                            <div className="font-medium text-[#1F3A5F]">{o.userEmail}</div>
-                            {o.userName ? <div className="text-xs">{o.userName}</div> : null}
-                          </td>
-                          <td className="px-2 py-2 text-[#1F3A5F]">
-                            {locale === "ar" ? o.offerNameAr : o.offerNameEn}
-                          </td>
-                          <td className="px-2 py-2 text-[#2C4E7A]/90">
-                            <div className="text-xs text-[#2C4E7A]/70">Items: {o.itemsCount}</div>
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 font-semibold text-[#1F3A5F]">
-                            ${formatUsd(o.chargeCents)}
-                          </td>
-                          <td className="px-2 py-2 font-semibold">{o.status}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      <div className="mt-6 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[#1F3A5F]">{t("allOrdersTitle")}</div>
+            <p className="mt-1 text-sm text-[#2C4E7A]/85">{t("allOrdersMovedHelp")}</p>
           </div>
-        ) : null}
+          <Link
+            href="/admin/payments-and-orders"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105"
+          >
+            {t("openPaymentsAndOrders")}
+          </Link>
+        </div>
       </div>
     </CollapsibleSection>
   );

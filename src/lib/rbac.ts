@@ -1,17 +1,38 @@
-import type { Role } from "@prisma/client";
+import { getLocale } from "next-intl/server";
+import { redirect } from "@/i18n/routing";
 import { getSession } from "@/lib/session";
+import {
+  type AppRole,
+  canAccessAdminPanel,
+  hasAtLeastRole,
+  isPlatformAdmin,
+} from "@/lib/rbac-shared";
 
-export type AppRole = Role;
+export type { AppRole } from "@/lib/rbac-shared";
+export {
+  ADMIN_PANEL_ROLES,
+  canAccessAdminPanel,
+  hasAtLeastRole,
+  isPlatformAdmin,
+} from "@/lib/rbac-shared";
 
-const roleOrder: Record<AppRole, number> = {
-  CLIENT: 1,
-  STAFF: 2,
-  SERVICE_OWNER: 3,
-  PLATFORM_ADMIN: 4,
-};
+/** Platform-only admin routes; service owners are sent back to the admin overview. */
+export async function requirePlatformAdmin() {
+  const session = await getSession();
+  const role = (session?.user as unknown as { role?: AppRole })?.role ?? "CLIENT";
 
-export function hasAtLeastRole(userRole: AppRole, required: AppRole) {
-  return roleOrder[userRole] >= roleOrder[required];
+  if (canAccessAdminPanel(role) && !isPlatformAdmin(role)) {
+    const locale = await getLocale();
+    redirect({ href: "/admin", locale });
+  }
+
+  if (!isPlatformAdmin(role)) {
+    const err = new Error("FORBIDDEN");
+    (err as unknown as { code: string }).code = "FORBIDDEN";
+    throw err;
+  }
+
+  return { session, role };
 }
 
 export async function requireRole(required: AppRole | AppRole[]) {
@@ -30,4 +51,3 @@ export async function requireRole(required: AppRole | AppRole[]) {
 
   return { session, role };
 }
-

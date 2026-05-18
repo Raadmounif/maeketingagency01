@@ -8,8 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { ensureSmmProviderConfig } from "@/lib/smm/provider-config";
 import { syncSmmCatalogFromProvider } from "@/lib/smm/sync-catalog";
-import { generateResellerApiKey, hashResellerApiKey } from "@/lib/reseller-key";
-import { dollarsToCents, creditWallet } from "@/lib/wallet";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -33,7 +31,6 @@ function normalizeOptionalUrl(raw: string | null | undefined): string | null {
 export async function updateSmmProviderSettingsAction(input: {
   baseUrl: string;
   globalMarkupPercent: number;
-  resellerMinMarginPct: number;
 }) {
   await requireSmmAdmin();
 
@@ -45,11 +42,9 @@ export async function updateSmmProviderSettingsAction(input: {
     create: {
       id: 1,
       baseUrl,
-      resellerMinMarginPct: Number(input.resellerMinMarginPct) || 0,
     },
     update: {
       baseUrl,
-      resellerMinMarginPct: Number(input.resellerMinMarginPct) || 0,
     },
   });
 
@@ -80,16 +75,13 @@ export async function syncSmmCatalogAction() {
 }
 
 export async function updateSmmServiceVisibilityAction(input: {
-  updates: Array<{ id: string; enabledForClients?: boolean; enabledForResellers?: boolean }>;
+  updates: Array<{ id: string; enabledForClients?: boolean }>;
 }) {
   await requireSmmAdmin();
 
   for (const u of input.updates) {
-    const data: { enabledForClients?: boolean; enabledForResellers?: boolean } = {};
+    const data: { enabledForClients?: boolean } = {};
     if (typeof u.enabledForClients === "boolean") data.enabledForClients = u.enabledForClients;
-    if (typeof u.enabledForResellers === "boolean") {
-      data.enabledForResellers = u.enabledForResellers;
-    }
     if (!Object.keys(data).length) continue;
 
     await prisma.smmService.update({
@@ -296,64 +288,6 @@ export async function removeManualServiceFromSmmClientCategoryAction(input: { it
   return { ok: true as const };
 }
 
-export async function issueResellerApiKeyAction(input: { email: string; discountPct: number }) {
-  await requireRole("PLATFORM_ADMIN");
-
-  const email = String(input.email ?? "").toLowerCase().trim();
-  if (!email) return { ok: false as const, message: "Email is required." };
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return { ok: false as const, message: "User not found." };
-
-  const apiKey = generateResellerApiKey();
-  const hash = hashResellerApiKey(apiKey);
-  const discountPct = Number(input.discountPct) || 0;
-
-  await prisma.resellerAccount.upsert({
-    where: { userId: user.id },
-    create: {
-      userId: user.id,
-      enabled: true,
-      apiKeyHash: hash,
-      discountPct,
-    },
-    update: {
-      enabled: true,
-      apiKeyHash: hash,
-      discountPct,
-    },
-  });
-
-  return { ok: true as const, apiKey };
-}
-
-export async function creditUserWalletAction(input: { email: string; amountUsd: number }) {
-  await requireRole("PLATFORM_ADMIN");
-
-  const email = String(input.email ?? "").toLowerCase().trim();
-  if (!email) return { ok: false as const, message: "Email is required." };
-
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return { ok: false as const, message: "User not found." };
-
-  const amountUsd = Number(input.amountUsd);
-  if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
-    return { ok: false as const, message: "Invalid amount." };
-  }
-
-  const amountCents = dollarsToCents(amountUsd);
-
-  await prisma.$transaction(async (tx) => {
-    await creditWallet(tx, {
-      userId: user.id,
-      amountCents,
-      note: "Admin wallet credit",
-    });
-  });
-
-  return { ok: true as const };
-}
-
 export async function updateSmmAdvertisingBoardAction(input: {
   locale: "en" | "ar";
   enabled: boolean;
@@ -502,7 +436,7 @@ export async function deleteSmmTopPickAction(input: { id: string }) {
 }
 
 /**
- * Per-service PERCENT markup on top of provider rate (clients + reseller pricing).
+ * Per-service PERCENT markup on top of provider rate (client / SMM Growth pricing).
  * Empty `percentText` removes the override so the default/global markup applies.
  */
 export async function upsertSmmServiceMarkupPercentAction(input: {

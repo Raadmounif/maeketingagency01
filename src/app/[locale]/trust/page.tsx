@@ -1,9 +1,16 @@
+import type { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { getLocale } from "next-intl/server";
 import { getSmmAdvertisingBoardForLocale } from "@/lib/smm/advertising-board";
-import { computeClientRateUsdPer1000, type MarkupRuleRow } from "@/lib/smm/pricing";
+import {
+  applyAccountPricingDiscount,
+  applyDiscountToUsdCents,
+  getUserPricingDiscountPct,
+  resolveListedClientRateUsdPer1000,
+} from "@/lib/account-pricing";
+import type { MarkupRuleRow } from "@/lib/smm/pricing";
 import {
   formatSypWhole,
   formatUsdFromCents,
@@ -12,11 +19,6 @@ import {
   walletSpendableUsdCents as computeSpendableUsdCents,
 } from "@/lib/wallet-money";
 import TrustClient from "./view";
-
-function applyPercentMarkup(base: number, pct: number) {
-  const p = Number(pct) || 0;
-  return base * (1 + p / 100);
-}
 
 function canAccessSmmAdmin(session: Awaited<ReturnType<typeof getSession>>): boolean {
   const role = (session?.user as unknown as { role?: string })?.role ?? "CLIENT";
@@ -69,6 +71,9 @@ export default async function TrustPage() {
         : formatUsdFromCents(spendable);
   }
   const showSmmAdminLink = canAccessSmmAdmin(session);
+  const accountPricingDiscountPct = userId
+    ? await getUserPricingDiscountPct(userId)
+    : 0;
   const adBoard = await getSmmAdvertisingBoardForLocale(locale);
 
   const rules = (await prisma.smmMarkupRule.findMany({
@@ -83,7 +88,9 @@ export default async function TrustPage() {
     id: s.id,
     name: s.name,
     description: s.description,
-    unitPriceUsd: s.unitPriceUsd.toString(),
+    unitPriceUsd: String(
+      applyAccountPricingDiscount(Number(s.unitPriceUsd), accountPricingDiscountPct),
+    ),
   }));
 
   const topPicksRaw = await prisma.smmTopServicePick.findMany({
@@ -144,6 +151,24 @@ export default async function TrustPage() {
     clientCategoryItems.map((it) => [it.serviceId, it.markupPct]),
   );
 
+  function listedRateForService(s: {
+    id: string;
+    providerRate: Prisma.Decimal;
+    categoryId: string;
+  }) {
+    const overridePct = markupPctByServiceId.get(s.id);
+    return String(
+      resolveListedClientRateUsdPer1000({
+        providerRate: s.providerRate,
+        serviceId: s.id,
+        categoryId: s.categoryId,
+        rules,
+        categoryItemMarkupPct: overridePct ?? null,
+        accountDiscountPct: accountPricingDiscountPct,
+      }),
+    );
+  }
+
   const categories = await prisma.smmCategory.findMany({
     orderBy: [{ sort: "asc" }, { providerName: "asc" }],
     include: {
@@ -180,18 +205,7 @@ export default async function TrustPage() {
     .map((t) => {
       const s = topServiceById.get(t.serviceId);
       if (!s) return null;
-      const overridePct = markupPctByServiceId.get(s.id);
-      const rate =
-        overridePct != null
-          ? String(applyPercentMarkup(Number(s.providerRate), overridePct))
-          : String(
-              computeClientRateUsdPer1000({
-                providerRate: s.providerRate,
-                serviceId: s.id,
-                categoryId: s.categoryId,
-                rules,
-              }),
-            );
+      const rate = listedRateForService(s);
       return {
         id: s.id,
         name: s.clientTitle?.trim() || s.providerName,
@@ -224,18 +238,7 @@ export default async function TrustPage() {
         .filter((it) => !it.service.isArchived)
         .map((it) => {
           const s = it.service;
-          const overridePct = markupPctByServiceId.get(s.id);
-          const rate =
-            overridePct != null
-              ? String(applyPercentMarkup(Number(s.providerRate), overridePct))
-              : String(
-                  computeClientRateUsdPer1000({
-                    providerRate: s.providerRate,
-                    serviceId: s.id,
-                    categoryId: s.categoryId,
-                    rules,
-                  }),
-                );
+          const rate = listedRateForService(s);
           return {
             kind: "API" as const,
             id: s.id,
@@ -278,7 +281,10 @@ export default async function TrustPage() {
         name: localeKey === "ar" ? cat.nameAr : cat.nameEn,
         previewLine,
         minRate: minRate != null ? String(minRate) : "",
-        offerPriceCents: cat.offerPriceCents,
+        offerPriceCents: applyDiscountToUsdCents(
+          cat.offerPriceCents,
+          accountPricingDiscountPct,
+        ),
         serviceCount: options.length,
         options,
       };
@@ -287,6 +293,7 @@ export default async function TrustPage() {
 
   return (
     <TrustClient
+      accountPricingDiscountPct={accountPricingDiscountPct}
       showSmmAdminLink={showSmmAdminLink}
       orderSectionNotes={orderSectionNotes}
       platformSuccessfulOrderTotal={platformSuccessfulOrderTotal}
@@ -302,18 +309,7 @@ export default async function TrustPage() {
         id: c.id,
         name: c.providerName,
         services: c.services.map((s) => {
-          const overridePct = markupPctByServiceId.get(s.id);
-          const rate =
-            overridePct != null
-              ? String(applyPercentMarkup(Number(s.providerRate), overridePct))
-              : String(
-                  computeClientRateUsdPer1000({
-                    providerRate: s.providerRate,
-                    serviceId: s.id,
-                    categoryId: s.categoryId,
-                    rules,
-                  }),
-                );
+          const rate = listedRateForService(s);
           return {
             id: s.id,
             name: s.clientTitle?.trim() || s.providerName,

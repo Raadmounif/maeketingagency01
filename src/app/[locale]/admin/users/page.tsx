@@ -1,10 +1,10 @@
 import { Link } from "@/i18n/routing";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/rbac";
+import { requirePlatformAdmin } from "@/lib/rbac";
 import { UsersTable } from "./table";
 
 export default async function AdminUsersPage() {
-  await requireRole("PLATFORM_ADMIN");
+  await requirePlatformAdmin();
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -13,6 +13,7 @@ export default async function AdminUsersPage() {
       email: true,
       name: true,
       role: true,
+      pricingDiscountPct: true,
       createdAt: true,
     },
     take: 100,

@@ -11,8 +11,6 @@ export async function placeSmmProviderOrder(input: {
   link: string;
   quantity: number;
   unitUsdPer1000: number;
-  channel: "DIRECT" | "RESELLER";
-  resellerUserId?: string | null;
 }) {
   const service = await prisma.smmService.findUnique({
     where: { id: input.prismaServiceId },
@@ -36,15 +34,13 @@ export async function placeSmmProviderOrder(input: {
     const split = await debitWallet(tx, {
       userId: input.userId,
       amountCents: chargeCents,
-      note: `SMM order (${input.channel})`,
+      note: "SMM order",
     });
 
     return tx.smmOrder.create({
       data: {
         userId: input.userId,
         serviceId: service.id,
-        channel: input.channel,
-        resellerUserId: input.resellerUserId ?? null,
         link: input.link,
         quantity: input.quantity,
         chargeCents,

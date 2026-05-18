@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { getPathname, Link, usePathname, useRouter } from "@/i18n/routing";
 import { setWalletDisplayCurrencyAction } from "@/lib/wallet-display-currency-action";
+import { canAccessAdminPanel, type AppRole } from "@/lib/rbac-shared";
 import {
   formatSypWhole,
   formatUsdFromCents,
@@ -85,8 +86,8 @@ export function SiteHeader(props?: {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const role = (data?.user as unknown as { role?: string })?.role;
-  const isAdmin = role === "PLATFORM_ADMIN";
+  const role = (data?.user as unknown as { role?: AppRole })?.role;
+  const isAdmin = role ? canAccessAdminPanel(role) : false;
   const isArabic = locale === "ar";
   const walletBalanceCents = props?.walletBalanceCents ?? null;
   const walletBalanceSyp = props?.walletBalanceSyp ?? null;

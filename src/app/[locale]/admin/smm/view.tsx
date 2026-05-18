@@ -6,10 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { Link } from "@/i18n/routing";
 import {
-  creditUserWalletAction,
   createSmmClientCategoryAction,
   deleteSmmClientCategoryAction,
-  issueResellerApiKeyAction,
   addServiceToSmmClientCategoryAction,
   removeServiceFromSmmClientCategoryAction,
   addManualServiceToSmmClientCategoryAction,
@@ -34,8 +32,7 @@ type ServiceRow = {
   clientTitle: string | null;
   clientDescription: string | null;
   enabledForClients: boolean;
-  enabledForResellers: boolean;
-  /** When set, overrides default markup % for this API service (clients + resellers). */
+  /** When set, overrides default markup % for this API service. */
   markupPercent: number | null;
 };
 
@@ -48,7 +45,6 @@ type CategoryRow = {
 type Defaults = {
   baseUrl: string;
   globalMarkupPercent: number;
-  resellerMinMarginPct: number;
   clientCategories: Array<{
     id: string;
     nameEn: string;
@@ -104,10 +100,10 @@ function boardToForm(p: AdvertisingBoardPayload): AdvertisingBoardForm {
 }
 
 function buildFlags(categories: CategoryRow[]) {
-  const m: Record<string, { c: boolean; r: boolean }> = {};
+  const m: Record<string, boolean> = {};
   for (const c of categories) {
     for (const s of c.services) {
-      m[s.id] = { c: s.enabledForClients, r: s.enabledForResellers };
+      m[s.id] = s.enabledForClients;
     }
   }
   return m;
@@ -1001,7 +997,6 @@ function SmmAdvertisingBoardsForm({
 
 export default function SmmAdminClient({
   defaults,
-  isPlatformAdmin,
   catalogVersion,
   advertisingBoards,
   adBoardVersionKey,
@@ -1010,7 +1005,6 @@ export default function SmmAdminClient({
   topPickOptions,
 }: {
   defaults: Defaults;
-  isPlatformAdmin: boolean;
   catalogVersion: string;
   advertisingBoards: { en: AdvertisingBoardPayload; ar: AdvertisingBoardPayload };
   adBoardVersionKey: string;
@@ -1038,9 +1032,6 @@ export default function SmmAdminClient({
   const [baseUrl, setBaseUrl] = useState(defaults.baseUrl);
   const [globalMarkupPercent, setGlobalMarkupPercent] = useState(
     String(defaults.globalMarkupPercent ?? 0),
-  );
-  const [resellerMinMarginPct, setResellerMinMarginPct] = useState(
-    String(defaults.resellerMinMarginPct ?? 0),
   );
   const [query, setQuery] = useState("");
 
@@ -1070,13 +1061,6 @@ export default function SmmAdminClient({
       setMarkupDraft(mk);
     });
   }, [catalogVersion, defaults.categories]);
-
-  const [resellerEmail, setResellerEmail] = useState("");
-  const [resellerDiscount, setResellerDiscount] = useState("10");
-  const [issuedKey, setIssuedKey] = useState<string | null>(null);
-
-  const [creditEmail, setCreditEmail] = useState("");
-  const [creditAmount, setCreditAmount] = useState("25");
 
   const clientCategories = defaults.clientCategories ?? [];
   const allServicesFlat = useMemo(
@@ -1120,7 +1104,6 @@ export default function SmmAdminClient({
       const res = await updateSmmProviderSettingsAction({
         baseUrl,
         globalMarkupPercent: Number(globalMarkupPercent),
-        resellerMinMarginPct: Number(resellerMinMarginPct),
       });
       setStatus(res.ok ? t("status.savedProviderSettings") : res.message);
       refresh();
@@ -1140,27 +1123,20 @@ export default function SmmAdminClient({
     });
   }
 
-  function bulkSet(which: "clients" | "resellers", value: boolean) {
+  function bulkSetClients(value: boolean) {
     const ids = filtered.flatMap((c) => c.services.map((s) => s.id));
     if (!ids.length) return;
 
     setFlags((prev) => {
       const next = { ...prev };
-      for (const id of ids) {
-        const cur = next[id] ?? { c: false, r: false };
-        next[id] = which === "clients" ? { ...cur, c: value } : { ...cur, r: value };
-      }
+      for (const id of ids) next[id] = value;
       return next;
     });
 
     setStatus(null);
     startUiTransition(async () => {
       await updateSmmServiceVisibilityAction({
-        updates: ids.map((id) =>
-          which === "clients"
-            ? { id, enabledForClients: value }
-            : { id, enabledForResellers: value },
-        ),
+        updates: ids.map((id) => ({ id, enabledForClients: value })),
       });
       setStatus(t("status.updatedVisibility"));
       refresh();
@@ -1195,54 +1171,15 @@ export default function SmmAdminClient({
     });
   }
 
-  function toggle(id: string, which: "clients" | "resellers", value: boolean) {
-    setFlags((prev) => {
-      const cur = prev[id] ?? { c: false, r: false };
-      return {
-        ...prev,
-        [id]: which === "clients" ? { ...cur, c: value } : { ...cur, r: value },
-      };
-    });
+  function toggleClient(id: string, value: boolean) {
+    setFlags((prev) => ({ ...prev, [id]: value }));
 
     setStatus(null);
     startUiTransition(async () => {
       await updateSmmServiceVisibilityAction({
-        updates:
-          which === "clients"
-            ? [{ id, enabledForClients: value }]
-            : [{ id, enabledForResellers: value }],
+        updates: [{ id, enabledForClients: value }],
       });
-      setStatus("Saved.");
-      refresh();
-    });
-  }
-
-  function issueResellerKey() {
-    setIssuedKey(null);
-    setStatus(null);
-    startUiTransition(async () => {
-      const res = await issueResellerApiKeyAction({
-        email: resellerEmail,
-        discountPct: Number(resellerDiscount),
-      });
-      if (!res.ok) {
-        setStatus(res.message);
-        return;
-      }
-      setIssuedKey(res.apiKey);
-      setStatus(t("status.issuedResellerKey"));
-      refresh();
-    });
-  }
-
-  function creditWallet() {
-    setStatus(null);
-    startUiTransition(async () => {
-      const res = await creditUserWalletAction({
-        email: creditEmail,
-        amountUsd: Number(creditAmount),
-      });
-      setStatus(res.ok ? t("status.creditedWallet") : res.message);
+      setStatus(t("status.updatedVisibility"));
       refresh();
     });
   }
@@ -1275,7 +1212,7 @@ export default function SmmAdminClient({
       </CollapsibleSection>
 
       <CollapsibleSection id="admin-smm-provider" title={t("sections.provider")}>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
           <div className="text-sm font-semibold text-[#1F3A5F]">{t("provider.baseUrl")}</div>
           <input
@@ -1303,15 +1240,6 @@ export default function SmmAdminClient({
           </div>
         </label>
 
-        <label className="block">
-          <div className="text-sm font-semibold text-[#1F3A5F]">{t("provider.resellerMinMargin")}</div>
-          <input
-            value={resellerMinMarginPct}
-            onChange={(e) => setResellerMinMarginPct(e.target.value)}
-            inputMode="numeric"
-            className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-          />
-        </label>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1354,14 +1282,14 @@ export default function SmmAdminClient({
           />
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4">
           <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-4">
             <div className="text-sm font-semibold text-[#1F3A5F]">{t("catalog.clients")}</div>
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => bulkSet("clients", true)}
+                onClick={() => bulkSetClients(true)}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
               >
                 {t("catalog.selectAll")}
@@ -1369,28 +1297,7 @@ export default function SmmAdminClient({
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => bulkSet("clients", false)}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
-              >
-                {t("catalog.unselectAll")}
-              </button>
-            </div>
-          </div>
-          <div className="rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-4">
-            <div className="text-sm font-semibold text-[#1F3A5F]">{t("catalog.resellers")}</div>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => bulkSet("resellers", true)}
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
-              >
-                {t("catalog.selectAll")}
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => bulkSet("resellers", false)}
+                onClick={() => bulkSetClients(false)}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm disabled:opacity-60"
               >
                 {t("catalog.unselectAll")}
@@ -1410,7 +1317,7 @@ export default function SmmAdminClient({
                 </div>
                 <div className="max-h-[min(70vh,56rem)] divide-y divide-[#2C4E7A]/10 overflow-y-auto overscroll-contain">
                   {cat.services.map((s) => {
-                    const f = flags[s.id] ?? { c: s.enabledForClients, r: s.enabledForResellers };
+                    const enabled = flags[s.id] ?? s.enabledForClients;
                     const copy = clientCopy[s.id] ?? { t: "", d: "" };
                     return (
                       <div key={s.id} className="flex flex-col">
@@ -1423,22 +1330,14 @@ export default function SmmAdminClient({
                               Provider ID: {s.providerServiceId}
                             </div>
                           </div>
-                          <div className="flex shrink-0 items-center gap-6">
+                          <div className="flex shrink-0 items-center">
                             <label className="inline-flex items-center gap-2 text-xs font-semibold text-[#1F3A5F]">
                               <input
                                 type="checkbox"
-                                checked={f.c}
-                                onChange={(e) => toggle(s.id, "clients", e.target.checked)}
+                                checked={enabled}
+                                onChange={(e) => toggleClient(s.id, e.target.checked)}
                               />
                               Client
-                            </label>
-                            <label className="inline-flex items-center gap-2 text-xs font-semibold text-[#1F3A5F]">
-                              <input
-                                type="checkbox"
-                                checked={f.r}
-                                onChange={(e) => toggle(s.id, "resellers", e.target.checked)}
-                              />
-                              Reseller
                             </label>
                           </div>
                         </div>
@@ -1469,8 +1368,7 @@ export default function SmmAdminClient({
                             </button>
                           </div>
                           <div className="text-[11px] text-[#2C4E7A]/75">
-                            Leave empty to use the default % above. Applies to SMM Growth and reseller API pricing for
-                            this service.
+                            Leave empty to use the default % above. Applies to SMM Growth pricing for this service.
                           </div>
                         </div>
                         <div className="space-y-2 border-t border-[#2C4E7A]/8 bg-[#F5F7FA]/60 px-4 py-3">
@@ -1538,88 +1436,6 @@ export default function SmmAdminClient({
         />
       </CollapsibleSection>
 
-      {isPlatformAdmin ? (
-        <CollapsibleSection id="admin-smm-reseller" title={t("sections.reseller")}>
-          <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.title")}</div>
-          <p className="mt-2 text-xs text-[#2C4E7A]/80">
-            {t("reseller.endpointPrefix")} <span className="font-mono">POST /api/reseller/v2</span> (same-origin).{" "}
-            {t("reseller.supportedActions")} <span className="font-mono">services</span>,{" "}
-            <span className="font-mono">add</span>, <span className="font-mono">status</span>,{" "}
-            <span className="font-mono">balance</span>.
-          </p>
-
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <label className="block md:col-span-1">
-              <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.userEmail")}</div>
-              <input
-                value={resellerEmail}
-                onChange={(e) => setResellerEmail(e.target.value)}
-                className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-                placeholder={t("reseller.resellerEmailPlaceholder")}
-              />
-            </label>
-            <label className="block md:col-span-1">
-              <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.resellerDiscount")}</div>
-              <input
-                value={resellerDiscount}
-                onChange={(e) => setResellerDiscount(e.target.value)}
-                inputMode="numeric"
-                className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-              />
-            </label>
-            <div className="flex items-end">
-              <button
-                type="button"
-                disabled={pending || !resellerEmail}
-                onClick={issueResellerKey}
-                className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
-              >
-                {t("reseller.issueKey")}
-              </button>
-            </div>
-          </div>
-
-          {issuedKey ? (
-            <div className="mt-4 rounded-xl border border-[#2C4E7A]/15 bg-[#F5F7FA] p-4 text-xs text-[#1F3A5F]">
-              <div className="font-semibold">{t("reseller.apiKeyCopyNow")}</div>
-              <div className="mt-2 break-all font-mono">{issuedKey}</div>
-            </div>
-          ) : null}
-
-          <div className="mt-8 border-t border-[#2C4E7A]/10 pt-6">
-            <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.walletCredit")}</div>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <label className="block">
-                <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.userEmail")}</div>
-                <input
-                  value={creditEmail}
-                  onChange={(e) => setCreditEmail(e.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-                />
-              </label>
-              <label className="block">
-                <div className="text-sm font-semibold text-[#1F3A5F]">{t("reseller.amountUsd")}</div>
-                <input
-                  value={creditAmount}
-                  onChange={(e) => setCreditAmount(e.target.value)}
-                  inputMode="decimal"
-                  className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-                />
-              </label>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  disabled={pending || !creditEmail}
-                  onClick={creditWallet}
-                  className="inline-flex h-11 w-full items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
-                >
-                  {t("reseller.creditWallet")}
-                </button>
-              </div>
-            </div>
-          </div>
-        </CollapsibleSection>
-      ) : null}
     </div>
   );
 }

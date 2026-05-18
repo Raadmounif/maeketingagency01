@@ -110,7 +110,6 @@ export default async function SmmAdminPage() {
             adBoardVersionKey={adBoardVersionKey}
             clientCategoriesVersionKey={clientCategoriesVersionKey}
             advertisingBoards={{ en: adEn, ar: adAr }}
-            isPlatformAdmin={role === "PLATFORM_ADMIN"}
             catalogVersion={catalogVersion}
             topPicks={topPicks.map((p) => ({
               id: p.id,
@@ -135,7 +134,6 @@ export default async function SmmAdminPage() {
             defaults={{
               baseUrl: cfg?.baseUrl ?? process.env.SMM_PROVIDER_BASE_URL ?? "https://smmturk.org",
               globalMarkupPercent: Number(globalRule?.value ?? 0),
-              resellerMinMarginPct: Number(cfg?.resellerMinMarginPct ?? 0),
               clientCategories: clientCategories.map((c) => ({
                 id: c.id,
                 nameEn: c.nameEn,
@@ -168,7 +166,6 @@ export default async function SmmAdminPage() {
                   clientTitle: s.clientTitle,
                   clientDescription: s.clientDescription,
                   enabledForClients: s.enabledForClients,
-                  enabledForResellers: s.enabledForResellers,
                   markupPercent: markupPercentByServiceId.has(s.id)
                     ? markupPercentByServiceId.get(s.id)!
                     : null,

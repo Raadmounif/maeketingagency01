@@ -4,17 +4,18 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { computeClientRateUsdPer1000, type MarkupRuleRow } from "@/lib/smm/pricing";
+import {
+  applyAccountPricingDiscount,
+  applyDiscountToUsdCents,
+  getUserPricingDiscountPct,
+  resolveListedClientRateUsdPer1000,
+} from "@/lib/account-pricing";
+import type { MarkupRuleRow } from "@/lib/smm/pricing";
 import { placeSmmProviderOrder } from "@/lib/smm/place-order";
 import { ensureSmmProviderConfig, getSmmProviderBaseUrl } from "@/lib/smm/provider-config";
 import { providerV2AddOrder } from "@/lib/smm/provider-v2";
 import { offerOrderRefundCredits, parseWalletSypPerUsd, walletSpendableUsdCents } from "@/lib/wallet-money";
 import { computeChargeCents, creditWallet, dollarsToCents, debitWallet, getOrCreateWallet } from "@/lib/wallet";
-
-function applyPercentMarkup(base: number, pct: number) {
-  const p = Number(pct) || 0;
-  return base * (1 + p / 100);
-}
 
 const MAX_ORDER_SECTION_NOTES = 16000;
 
@@ -72,19 +73,22 @@ export async function placeSmmGrowthOrderAction(input: {
     orderBy: { updatedAt: "desc" },
   })) as MarkupRuleRow[];
 
-  const override = await prisma.smmClientCategoryItem.findUnique({
-    where: { serviceId: service.id },
-    select: { markupPct: true },
-  });
+  const [override, accountDiscountPct] = await Promise.all([
+    prisma.smmClientCategoryItem.findUnique({
+      where: { serviceId: service.id },
+      select: { markupPct: true },
+    }),
+    getUserPricingDiscountPct(userId),
+  ]);
 
-  const clientRate = override
-    ? applyPercentMarkup(Number(service.providerRate), override.markupPct)
-    : computeClientRateUsdPer1000({
-        providerRate: service.providerRate,
-        serviceId: service.id,
-        categoryId: service.categoryId,
-        rules,
-      });
+  const clientRate = resolveListedClientRateUsdPer1000({
+    providerRate: service.providerRate,
+    serviceId: service.id,
+    categoryId: service.categoryId,
+    rules,
+    categoryItemMarkupPct: override?.markupPct ?? null,
+    accountDiscountPct,
+  });
 
   const qty = Math.floor(Number(input.quantity));
   if (!Number.isFinite(qty) || qty < service.providerMin || qty > service.providerMax) {
@@ -116,7 +120,6 @@ export async function placeSmmGrowthOrderAction(input: {
       link: input.link.trim(),
       quantity: qty,
       unitUsdPer1000: clientRate,
-      channel: "DIRECT",
     });
     return { ok: true as const, orderId: res.orderId, providerOrderId: res.providerOrderId };
   } catch (e) {
@@ -157,7 +160,11 @@ export async function placeCustomServiceOrderAction(input: {
 
   const note = String(input.clientNote ?? "").trim().slice(0, 512) || null;
 
-  const unitPriceUsd = Number(service.unitPriceUsd);
+  const accountDiscountPct = await getUserPricingDiscountPct(userId);
+  const unitPriceUsd = applyAccountPricingDiscount(
+    Number(service.unitPriceUsd),
+    accountDiscountPct,
+  );
   const totalUsd = unitPriceUsd * units;
   const chargeCents = dollarsToCents(totalUsd);
   if (chargeCents < 0) {
@@ -263,7 +270,11 @@ export async function placeSmmOfferOrderAction(input: {
     manualLinks[it.customServiceId] = link.slice(0, 2048);
   }
 
-  const chargeCents = Math.max(0, Math.floor(Number(offer.offerPriceCents) || 0));
+  const accountDiscountPct = await getUserPricingDiscountPct(userId);
+  const chargeCents = applyDiscountToUsdCents(
+    Math.max(0, Math.floor(Number(offer.offerPriceCents) || 0)),
+    accountDiscountPct,
+  );
   if (chargeCents <= 0) {
     return { ok: false as const, message: "Offer price is not configured yet." };
   }
@@ -316,8 +327,6 @@ export async function placeSmmOfferOrderAction(input: {
           data: {
             userId,
             serviceId: oi.serviceId,
-            channel: "DIRECT",
-            resellerUserId: null,
             link: oi.link,
             quantity: oi.quantity,
             chargeCents: 0,

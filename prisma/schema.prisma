@@ -22,6 +22,8 @@ model User {
   emailVerified DateTime?
   image         String?
   role          Role      @default(CLIENT)
+  /** Per-account discount (0–100): % off listed SMM Growth / order prices for this user. */
+  pricingDiscountPct Float @default(0)
 
   accounts Account[]
   sessions Session[]
@@ -32,7 +34,6 @@ model User {
   paymentRequests PaymentRequest[]
   paymentsApproved PaymentRequest[] @relation("PaymentApprovedBy")
   paymentsRefunded PaymentRequest[] @relation("PaymentRefundedBy")
-  reseller ResellerAccount?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -111,9 +112,6 @@ model SmmProviderConfig {
    */
   baseUrl String @db.VarChar(512)
 
-  /** Minimum margin guardrail applied to reseller discounts. */
-  resellerMinMarginPct Float @default(0)
-
   updatedAt DateTime @updatedAt
 }
 
@@ -151,9 +149,8 @@ model SmmService {
   categoryId String
   category   SmmCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
-  /** Visibility flags - default OFF (must be enabled explicitly). */
-  enabledForClients   Boolean @default(false)
-  enabledForResellers Boolean @default(false)
+  /** Visibility flag - default OFF (must be enabled explicitly). */
+  enabledForClients Boolean @default(false)
 
   isArchived Boolean @default(false)
 
@@ -310,11 +307,6 @@ model PaymentRequest {
   @@index([createdAt])
 }
 
-enum OrderChannel {
-  DIRECT
-  RESELLER
-}
-
 enum SmmOrderStatus {
   PENDING
   PROCESSING
@@ -334,13 +326,10 @@ model SmmOrder {
   serviceId String
   service   SmmService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
-  channel       OrderChannel @default(DIRECT)
-  resellerUserId String?
-
   link     String @db.VarChar(2048)
   quantity Int
 
-  /** Charge to the end-customer (or reseller) in cents. */
+  /** Charge to the end-customer in cents. */
   chargeCents Int
 
   /** Actual wallet debit split (for refunds if provider fails). Legacy rows use chargeCents when both zero. */
@@ -360,23 +349,6 @@ model SmmOrder {
   @@index([userId])
   @@index([serviceId])
   @@index([providerOrderId])
-}
-
-model ResellerAccount {
-  id String @id @default(cuid())
-
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  enabled Boolean @default(false)
-  /** Store only a hash; never store plaintext API keys. Null until a key is issued. */
-  apiKeyHash String? @db.VarChar(128)
-
-  /** Discount percent off the platform client rate (0-100). */
-  discountPct Float @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 /** SMM Growth service page banner / advertising board (per UI locale). */

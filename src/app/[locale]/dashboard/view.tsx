@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { pillClassForStatus } from "@/components/StatusPill";
 import { PaymentTrackingCode } from "@/components/PaymentTrackingCode";
 import { useRouter } from "@/i18n/routing";
 import { checkMinDeposit } from "@/lib/payment-method-minimum";
@@ -74,18 +75,42 @@ type ManualOrderRow = {
   clientNote: string | null;
 };
 
-function pillClassForStatus(status: string) {
-  const s = status.toLowerCase();
-  if (s.includes("complete") || s.includes("done") || s.includes("success")) {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+function paymentStatusLabel(
+  status: PaymentRow["status"],
+  t: ReturnType<typeof useTranslations<"dashboardPage">>,
+) {
+  switch (status) {
+    case "APPROVED":
+      return t("paymentStatusApproved");
+    case "REJECTED":
+      return t("paymentStatusRejected");
+    case "REFUNDED":
+      return t("paymentStatusRefunded");
+    default:
+      return t("paymentStatusPending");
   }
-  if (s.includes("fail") || s.includes("cancel") || s.includes("reject") || s.includes("refund")) {
-    return "bg-rose-50 text-rose-700 border-rose-200";
+}
+
+function apiOrderStatusLabel(
+  status: ApiOrderRow["status"],
+  t: ReturnType<typeof useTranslations<"dashboardPage">>,
+) {
+  switch (status) {
+    case "PROCESSING":
+      return t("orderStatusProcessing");
+    case "IN_PROGRESS":
+      return t("orderStatusInProgress");
+    case "COMPLETED":
+      return t("orderStatusCompleted");
+    case "PARTIAL":
+      return t("orderStatusPartial");
+    case "CANCELED":
+      return t("orderStatusCanceled");
+    case "FAILED":
+      return t("orderStatusFailed");
+    default:
+      return t("orderStatusPending");
   }
-  if (s.includes("pending") || s.includes("process") || s.includes("progress")) {
-    return "bg-amber-50 text-amber-800 border-amber-200";
-  }
-  return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
 export default function DashboardClient(props: {
@@ -216,7 +241,9 @@ export default function DashboardClient(props: {
         urlHashNonce={urlHashNonce}
       >
         <p className="mt-2 text-sm text-[#2C4E7A]/85">
-          Create a payment request. Status will be <strong>Pending</strong> until an admin approves.
+          {t.rich("addFundsHelp", {
+            pending: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
 
         {!props.methods.length ? (
@@ -235,7 +262,7 @@ export default function DashboardClient(props: {
               return;
             }
             if (!methodId) {
-              showToast("error", "Choose a payment method.");
+              showToast("error", t("choosePaymentMethod"));
               return;
             }
 
@@ -247,7 +274,7 @@ export default function DashboardClient(props: {
 
             const method = props.methods.find((m) => m.id === methodId);
             if (!method) {
-              showToast("error", "Choose a payment method.");
+              showToast("error", t("choosePaymentMethod"));
               return;
             }
 
@@ -343,7 +370,7 @@ export default function DashboardClient(props: {
         >
           <label className="block">
             <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Method
+              {t("method")}
             </div>
             <select
               className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
@@ -505,19 +532,19 @@ export default function DashboardClient(props: {
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
                 <th className="px-3 py-2">{t("trackingCode")}</th>
-                <th className="px-3 py-2">When</th>
-                <th className="px-3 py-2">Method</th>
-                <th className="px-3 py-2">Amount</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Note</th>
-                <th className="px-3 py-2">Proof</th>
+                <th className="px-3 py-2">{t("tableWhen")}</th>
+                <th className="px-3 py-2">{t("tableMethod")}</th>
+                <th className="px-3 py-2">{t("tableAmount")}</th>
+                <th className="px-3 py-2">{t("tableStatus")}</th>
+                <th className="px-3 py-2">{t("tableNote")}</th>
+                <th className="px-3 py-2">{t("tableProof")}</th>
               </tr>
             </thead>
             <tbody className="text-[#1F3A5F]">
               {sortedPayments.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-3 py-6 text-center text-[#2C4E7A]">
-                    No payments yet.
+                    {t("noPaymentsYet")}
                   </td>
                 </tr>
               ) : (
@@ -537,9 +564,11 @@ export default function DashboardClient(props: {
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">
                       {formatPaymentRequestAmount(p)}
                     </td>
-                    <td className="px-3 py-2 font-semibold text-[#1F3A5F]">{p.status}</td>
+                    <td className="px-3 py-2 font-semibold text-[#1F3A5F]">
+                      {paymentStatusLabel(p.status, t)}
+                    </td>
                     <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]">
-                      {p.clientNote ?? "—"}
+                      {p.clientNote ?? t("emptyCell")}
                     </td>
                     <td className="px-3 py-2 text-[#2C4E7A]">
                       {p.proofUrl ? (
@@ -549,10 +578,10 @@ export default function DashboardClient(props: {
                           rel="noreferrer"
                           className="font-semibold text-[#1F3A5F] underline"
                         >
-                          Open
+                          {t("openProof")}
                         </a>
                       ) : (
-                        "—"
+                        t("emptyCell")
                       )}
                     </td>
                   </tr>
@@ -570,27 +599,25 @@ export default function DashboardClient(props: {
         urlHashId={urlHashId}
         urlHashNonce={urlHashNonce}
       >
-        <p className="mt-2 text-sm text-[#2C4E7A]/85">
-          API service status updates automatically from the provider. Manual service status is updated by an admin.
-        </p>
+        <p className="mt-2 text-sm text-[#2C4E7A]/85">{t("ordersHelp")}</p>
 
         <div className="mt-4 overflow-x-auto rounded-lg border border-[#2C4E7A]/12">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
-                <th className="px-3 py-2">When</th>
-                <th className="px-3 py-2">Type</th>
-                <th className="px-3 py-2">Service</th>
-                <th className="px-3 py-2">Details</th>
-                <th className="px-3 py-2">Total</th>
-                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">{t("orderTableWhen")}</th>
+                <th className="px-3 py-2">{t("orderTableType")}</th>
+                <th className="px-3 py-2">{t("orderTableService")}</th>
+                <th className="px-3 py-2">{t("orderTableDetails")}</th>
+                <th className="px-3 py-2">{t("orderTableTotal")}</th>
+                <th className="px-3 py-2">{t("orderTableStatus")}</th>
               </tr>
             </thead>
             <tbody>
               {ordered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-[#2C4E7A]/75">
-                    No service orders yet.
+                    {t("noOrdersYet")}
                   </td>
                 </tr>
               ) : (
@@ -600,7 +627,7 @@ export default function DashboardClient(props: {
                       {new Date(o.createdAt).toLocaleString()}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">
-                      {o.kind === "API" ? "API" : "Manual"}
+                      {o.kind === "API" ? t("orderTypeApi") : t("orderTypeManual")}
                     </td>
                     <td className="max-w-[260px] px-3 py-2 text-[#1F3A5F]">{o.serviceName}</td>
                     <td className="px-3 py-2 text-[#2C4E7A]/90">
@@ -610,8 +637,10 @@ export default function DashboardClient(props: {
                             {o.link}
                           </div>
                           <div className="text-xs text-[#2C4E7A]/75">
-                            Qty: {o.quantity}
-                            {o.providerOrderId ? ` · Provider ID: ${o.providerOrderId}` : ""}
+                            {t("orderQty", { qty: o.quantity })}
+                            {o.providerOrderId
+                              ? ` · ${t("orderProviderId", { id: o.providerOrderId })}`
+                              : ""}
                           </div>
                         </div>
                       ) : (
@@ -620,10 +649,13 @@ export default function DashboardClient(props: {
                             {o.link}
                           </div>
                           <div className="text-xs text-[#2C4E7A]/75">
-                            Units: {o.units} · Unit: ${o.unitPriceUsd}
+                            {t("orderUnits", { units: o.units })} ·{" "}
+                            {t("orderUnitPrice", { price: o.unitPriceUsd })}
                           </div>
                           <div className="text-xs text-[#2C4E7A]/75">
-                            Note: {o.clientNote?.trim() ? o.clientNote : "—"}
+                            {t("orderNote", {
+                              note: o.clientNote?.trim() ? o.clientNote : t("emptyCell"),
+                            })}
                           </div>
                         </div>
                       )}
@@ -640,7 +672,11 @@ export default function DashboardClient(props: {
                           ),
                         ].join(" ")}
                       >
-                        {o.kind === "API" ? o.status : o.status === "DONE" ? "SUCCEEDED" : "ORDERED"}
+                        {o.kind === "API"
+                          ? apiOrderStatusLabel(o.status, t)
+                          : o.status === "DONE"
+                            ? t("orderStatusSucceeded")
+                            : t("orderStatusOrdered")}
                       </span>
                     </td>
                   </tr>

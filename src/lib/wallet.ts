@@ -98,7 +98,7 @@ export async function debitWallet(
   return { debitedUsdCents: fromUsd, debitedSyp: fromSyp };
 }
 
-/** Debit whole SYP from the wallet (e.g. payment refund). */
+/** Debit whole SYP from the wallet. */
 export async function debitWalletSyp(
   tx: Prisma.TransactionClient,
   input: { userId: string; amountSyp: number; note?: string },

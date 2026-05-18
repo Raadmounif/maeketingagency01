@@ -89,6 +89,7 @@ export default function TrustClient({
   categories,
   adBoard,
   isAuthenticated,
+  accountPricingDiscountPct,
   walletSpendableUsdCents,
   walletBalanceAmountDisplay,
   showSmmAdminLink,
@@ -102,6 +103,8 @@ export default function TrustClient({
   categories: Category[];
   adBoard: TrustAdBoard | null;
   isAuthenticated: boolean;
+  /** Per-account discount (0–100) applied to listed SMM Growth prices. */
+  accountPricingDiscountPct: number;
   /** Signed-in user's combined spendable balance in USD cents (SYP included at admin rate). */
   walletSpendableUsdCents: number | null;
   /** Pre-formatted balance for current header currency preference. */
@@ -459,8 +462,15 @@ export default function TrustClient({
         </div>
 
         {isAuthenticated && walletBalanceAmountDisplay !== null ? (
-          <div className="mt-3 text-sm font-medium text-[#1F3A5F]">
-            {t("order.walletBalance", { amount: walletBalanceAmountDisplay })}
+          <div className="mt-3 space-y-1">
+            <div className="text-sm font-medium text-[#1F3A5F]">
+              {t("order.walletBalance", { amount: walletBalanceAmountDisplay })}
+            </div>
+            {accountPricingDiscountPct > 0 ? (
+              <div className="text-xs font-medium text-emerald-700">
+                {t("order.accountDiscount", { pct: accountPricingDiscountPct })}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

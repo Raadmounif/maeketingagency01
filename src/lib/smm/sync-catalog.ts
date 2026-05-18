@@ -48,7 +48,6 @@ export async function syncSmmCatalogFromProvider() {
         providerCancel: Boolean(s.cancel),
         categoryId: category.id,
         enabledForClients: false,
-        enabledForResellers: false,
       },
       update: {
         providerName: String(s.name),

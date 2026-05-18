@@ -10,7 +10,7 @@ export async function ensureSmmProviderConfig() {
 
   return prisma.smmProviderConfig.upsert({
     where: { id: 1 },
-    create: { id: 1, baseUrl: defaultBase, resellerMinMarginPct: 0 },
+    create: { id: 1, baseUrl: defaultBase },
     update: {},
   });
 }
