@@ -89,7 +89,8 @@ export default function TrustClient({
   categories,
   adBoard,
   isAuthenticated,
-  walletBalanceCents,
+  walletSpendableUsdCents,
+  walletBalanceAmountDisplay,
   showSmmAdminLink,
   orderSectionNotes,
   platformSuccessfulOrderTotal,
@@ -101,8 +102,10 @@ export default function TrustClient({
   categories: Category[];
   adBoard: TrustAdBoard | null;
   isAuthenticated: boolean;
-  /** Signed-in user's wallet balance in cents; `null` when not logged in. */
-  walletBalanceCents: number | null;
+  /** Signed-in user's combined spendable balance in USD cents (SYP included at admin rate). */
+  walletSpendableUsdCents: number | null;
+  /** Pre-formatted balance for current header currency preference. */
+  walletBalanceAmountDisplay: string | null;
   showSmmAdminLink: boolean;
   orderSectionNotes: { en: string; ar: string };
   /** Completed API orders + completed manual-service orders (all-time). */
@@ -227,22 +230,22 @@ export default function TrustClient({
     isAuthenticated &&
     Boolean(bundleModal?.id) &&
     bundleLinksValid &&
-    walletBalanceCents !== null &&
-    walletBalanceCents >= (bundleModal?.offerPriceCents ?? 0);
+    walletSpendableUsdCents !== null &&
+    walletSpendableUsdCents >= (bundleModal?.offerPriceCents ?? 0);
 
   const manualSubmitBlocked =
     isAuthenticated &&
     manualOrderChargeCents > 0 &&
-    walletBalanceCents !== null &&
-    walletBalanceCents < manualOrderChargeCents;
+    walletSpendableUsdCents !== null &&
+    walletSpendableUsdCents < manualOrderChargeCents;
 
   const canSubmitSmmOrder =
     isAuthenticated &&
     Boolean(selectedServiceId && link && quantity) &&
     estimatedSmmChargeCents != null &&
     estimatedSmmChargeCents > 0 &&
-    walletBalanceCents !== null &&
-    walletBalanceCents >= estimatedSmmChargeCents;
+    walletSpendableUsdCents !== null &&
+    walletSpendableUsdCents >= estimatedSmmChargeCents;
 
   const viewerOrderNote = (locale === "ar" ? orderSectionNotes.ar : orderSectionNotes.en).trim();
   const showOrderNotesSection = showSmmAdminLink || viewerOrderNote.length > 0;
@@ -455,9 +458,9 @@ export default function TrustClient({
           {t("order.guestBrowseHint")}
         </div>
 
-        {isAuthenticated && walletBalanceCents !== null ? (
+        {isAuthenticated && walletBalanceAmountDisplay !== null ? (
           <div className="mt-3 text-sm font-medium text-[#1F3A5F]">
-            {t("order.walletBalance", { amount: formatUsdFromCents(walletBalanceCents) })}
+            {t("order.walletBalance", { amount: walletBalanceAmountDisplay })}
           </div>
         ) : null}
 
@@ -593,8 +596,8 @@ export default function TrustClient({
           {isAuthenticated &&
           estimatedSmmChargeCents != null &&
           estimatedSmmChargeCents > 0 &&
-          walletBalanceCents !== null &&
-          walletBalanceCents < estimatedSmmChargeCents ? (
+          walletSpendableUsdCents !== null &&
+          walletSpendableUsdCents < estimatedSmmChargeCents ? (
             <div className="sm:col-span-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-[#1F3A5F]">
               {t("order.insufficientBalance")}{" "}
               <Link href="/dashboard" className="font-semibold underline">
@@ -800,15 +803,15 @@ export default function TrustClient({
               {t("clientOffers.finalPrice", { amount: formatUsdFromCents(bundleModal.offerPriceCents) })}
             </div>
 
-            {isAuthenticated && walletBalanceCents !== null ? (
+            {isAuthenticated && walletBalanceAmountDisplay !== null ? (
               <p className="mt-2 text-sm text-[#1F3A5F]">
-                {t("order.walletBalance", { amount: formatUsdFromCents(walletBalanceCents) })}
+                {t("order.walletBalance", { amount: walletBalanceAmountDisplay })}
               </p>
             ) : null}
 
             {isAuthenticated &&
-            walletBalanceCents !== null &&
-            walletBalanceCents < bundleModal.offerPriceCents ? (
+            walletSpendableUsdCents !== null &&
+            walletSpendableUsdCents < bundleModal.offerPriceCents ? (
               <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-[#1F3A5F]">
                 {t("order.insufficientBalance")}{" "}
                 <Link href="/dashboard" className="font-semibold underline">
@@ -923,9 +926,9 @@ export default function TrustClient({
             <p className="mt-1 text-sm text-[#2C4E7A]/90">
               {manualModalService.name} — <strong>${manualModalService.unitPriceUsd} / unit</strong>
             </p>
-            {isAuthenticated && walletBalanceCents !== null ? (
+            {isAuthenticated && walletBalanceAmountDisplay !== null ? (
               <p className="mt-2 text-sm text-[#1F3A5F]">
-                {t("order.walletBalance", { amount: formatUsdFromCents(walletBalanceCents) })}
+                {t("order.walletBalance", { amount: walletBalanceAmountDisplay })}
                 {manualOrderChargeCents > 0 ? (
                   <>
                     {" "}

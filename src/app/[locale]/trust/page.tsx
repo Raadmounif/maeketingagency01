@@ -1,8 +1,16 @@
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { getLocale } from "next-intl/server";
 import { getSmmAdvertisingBoardForLocale } from "@/lib/smm/advertising-board";
 import { computeClientRateUsdPer1000, type MarkupRuleRow } from "@/lib/smm/pricing";
+import {
+  formatSypWhole,
+  formatUsdFromCents,
+  parseWalletSypPerUsd,
+  walletDisplayTotalSyp,
+  walletSpendableUsdCents as computeSpendableUsdCents,
+} from "@/lib/wallet-money";
 import TrustClient from "./view";
 
 function applyPercentMarkup(base: number, pct: number) {
@@ -22,21 +30,46 @@ export default async function TrustPage() {
     session?.user && "id" in session.user
       ? String((session.user as { id: string }).id)
       : null;
-  let walletBalanceCents: number | null = null;
+  const cookieStore = await cookies();
+  const walletDisplayCurrency =
+    cookieStore.get("wallet_display_currency")?.value === "SYP" ? "SYP" : "USD";
+
+  const [siteSettings, walletRow] = await Promise.all([
+    prisma.siteSettings.findUnique({
+      where: { id: 1 },
+      select: {
+        smmGrowthOrderNotesEn: true,
+        smmGrowthOrderNotesAr: true,
+        walletSypPerUsd: true,
+      },
+    }),
+    userId ? prisma.wallet.findUnique({ where: { userId } }) : Promise.resolve(null),
+  ]);
+
+  const orderSectionNotes = {
+    en: siteSettings?.smmGrowthOrderNotesEn?.trim() ?? "",
+    ar: siteSettings?.smmGrowthOrderNotesAr?.trim() ?? "",
+  };
+
+  let walletSpendableUsdCents: number | null = null;
+  let walletBalanceAmountDisplay: string | null = null;
   if (userId) {
-    const wallet = await prisma.wallet.findUnique({ where: { userId } });
-    walletBalanceCents = wallet?.balanceCents ?? 0;
+    const w = {
+      balanceCents: walletRow?.balanceCents ?? 0,
+      balanceSyp: walletRow?.balanceSyp ?? 0,
+    };
+    const rate = parseWalletSypPerUsd(siteSettings?.walletSypPerUsd);
+    const spendable = computeSpendableUsdCents(w, rate);
+    walletSpendableUsdCents = spendable;
+    walletBalanceAmountDisplay =
+      walletDisplayCurrency === "SYP"
+        ? rate > 0
+          ? formatSypWhole(walletDisplayTotalSyp(w, rate))
+          : formatSypWhole(w.balanceSyp)
+        : formatUsdFromCents(spendable);
   }
   const showSmmAdminLink = canAccessSmmAdmin(session);
   const adBoard = await getSmmAdvertisingBoardForLocale(locale);
-  const siteNotes = await prisma.siteSettings.findUnique({
-    where: { id: 1 },
-    select: { smmGrowthOrderNotesEn: true, smmGrowthOrderNotesAr: true },
-  });
-  const orderSectionNotes = {
-    en: siteNotes?.smmGrowthOrderNotesEn?.trim() ?? "",
-    ar: siteNotes?.smmGrowthOrderNotesAr?.trim() ?? "",
-  };
 
   const rules = (await prisma.smmMarkupRule.findMany({
     orderBy: { updatedAt: "desc" },
@@ -258,7 +291,8 @@ export default async function TrustPage() {
       orderSectionNotes={orderSectionNotes}
       platformSuccessfulOrderTotal={platformSuccessfulOrderTotal}
       isAuthenticated={Boolean(session?.user)}
-      walletBalanceCents={walletBalanceCents}
+      walletSpendableUsdCents={walletSpendableUsdCents}
+      walletBalanceAmountDisplay={walletBalanceAmountDisplay}
       adBoard={adBoard}
       manualServices={manualServicesPayload}
       clientBundles={clientBundles}

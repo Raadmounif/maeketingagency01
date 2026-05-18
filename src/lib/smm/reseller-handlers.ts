@@ -8,6 +8,7 @@ import {
 import { ensureSmmProviderConfig } from "@/lib/smm/provider-config";
 import { placeSmmProviderOrder, refreshSmmOrderStatusFromProvider } from "@/lib/smm/place-order";
 import { getOrCreateWallet } from "@/lib/wallet";
+import { parseWalletSypPerUsd, walletSpendableUsdCents } from "@/lib/wallet-money";
 
 function jsonError(message: string) {
   return { error: message };
@@ -28,9 +29,17 @@ export async function handleResellerV2Request(body: Record<string, string>) {
   })) as MarkupRuleRow[];
 
   if (action === "balance") {
-    const wallet = await getOrCreateWallet(reseller.userId);
+    const [wallet, site] = await Promise.all([
+      getOrCreateWallet(reseller.userId),
+      prisma.siteSettings.findUnique({ where: { id: 1 }, select: { walletSypPerUsd: true } }),
+    ]);
+    const rate = parseWalletSypPerUsd(site?.walletSypPerUsd);
+    const spendableCents = walletSpendableUsdCents(
+      { balanceCents: wallet.balanceCents, balanceSyp: wallet.balanceSyp },
+      rate,
+    );
     return {
-      balance: (wallet.balanceCents / 100).toFixed(5),
+      balance: (spendableCents / 100).toFixed(5),
       currency: "USD",
     };
   }

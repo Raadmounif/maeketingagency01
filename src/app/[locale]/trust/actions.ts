@@ -8,7 +8,8 @@ import { computeClientRateUsdPer1000, type MarkupRuleRow } from "@/lib/smm/prici
 import { placeSmmProviderOrder } from "@/lib/smm/place-order";
 import { ensureSmmProviderConfig, getSmmProviderBaseUrl } from "@/lib/smm/provider-config";
 import { providerV2AddOrder } from "@/lib/smm/provider-v2";
-import { computeChargeCents, dollarsToCents, debitWallet, getOrCreateWallet } from "@/lib/wallet";
+import { offerOrderRefundCredits, parseWalletSypPerUsd, walletSpendableUsdCents } from "@/lib/wallet-money";
+import { computeChargeCents, creditWallet, dollarsToCents, debitWallet, getOrCreateWallet } from "@/lib/wallet";
 
 function applyPercentMarkup(base: number, pct: number) {
   const p = Number(pct) || 0;
@@ -95,8 +96,12 @@ export async function placeSmmGrowthOrderAction(input: {
     return { ok: false as const, message: "Invalid order total." };
   }
 
-  const wallet = await getOrCreateWallet(userId);
-  if (wallet.balanceCents < chargeCents) {
+  const [wallet, site] = await Promise.all([
+    getOrCreateWallet(userId),
+    prisma.siteSettings.findUnique({ where: { id: 1 }, select: { walletSypPerUsd: true } }),
+  ]);
+  const rate = parseWalletSypPerUsd(site?.walletSypPerUsd);
+  if (walletSpendableUsdCents(wallet, rate) < chargeCents) {
     return {
       ok: false as const,
       message:
@@ -159,8 +164,12 @@ export async function placeCustomServiceOrderAction(input: {
     return { ok: false as const, message: "Invalid service price." };
   }
 
-  const wallet = await getOrCreateWallet(userId);
-  if (chargeCents > 0 && wallet.balanceCents < chargeCents) {
+  const [wallet, site] = await Promise.all([
+    getOrCreateWallet(userId),
+    prisma.siteSettings.findUnique({ where: { id: 1 }, select: { walletSypPerUsd: true } }),
+  ]);
+  const rate = parseWalletSypPerUsd(site?.walletSypPerUsd);
+  if (chargeCents > 0 && walletSpendableUsdCents(wallet, rate) < chargeCents) {
     return {
       ok: false as const,
       message:
@@ -169,8 +178,9 @@ export async function placeCustomServiceOrderAction(input: {
   }
 
   const order = await prisma.$transaction(async (tx) => {
+    let split = { debitedUsdCents: 0, debitedSyp: 0 };
     if (chargeCents > 0) {
-      await debitWallet(tx, {
+      split = await debitWallet(tx, {
         userId,
         amountCents: chargeCents,
         note: `Manual service (${service.name.slice(0, 80)})`,
@@ -184,6 +194,8 @@ export async function placeCustomServiceOrderAction(input: {
         units,
         totalUsd,
         clientNote: note,
+        walletDebitUsdCents: split.debitedUsdCents,
+        walletDebitSyp: split.debitedSyp,
       },
     });
   });
@@ -256,8 +268,12 @@ export async function placeSmmOfferOrderAction(input: {
     return { ok: false as const, message: "Offer price is not configured yet." };
   }
 
-  const wallet = await getOrCreateWallet(userId);
-  if (wallet.balanceCents < chargeCents) {
+  const [wallet, site] = await Promise.all([
+    getOrCreateWallet(userId),
+    prisma.siteSettings.findUnique({ where: { id: 1 }, select: { walletSypPerUsd: true } }),
+  ]);
+  const rate = parseWalletSypPerUsd(site?.walletSypPerUsd);
+  if (walletSpendableUsdCents(wallet, rate) < chargeCents) {
     return {
       ok: false as const,
       message: "Insufficient wallet balance. Add funds from your dashboard before ordering this offer.",
@@ -266,12 +282,14 @@ export async function placeSmmOfferOrderAction(input: {
 
   // Debit once + create offer order + create placeholder SMM orders (chargeCents=0) in one transaction.
   const created = await prisma.$transaction(async (tx) => {
-    await debitWallet(tx, { userId, amountCents: chargeCents, note: `SMM offer: ${offer.nameEn}` });
+    const split = await debitWallet(tx, { userId, amountCents: chargeCents, note: `SMM offer: ${offer.nameEn}` });
     const offerOrder = await tx.smmOfferOrder.create({
       data: {
         userId,
         categoryId: offer.id,
         chargeCents,
+        walletDebitUsdCents: split.debitedUsdCents,
+        walletDebitSyp: split.debitedSyp,
         status: "PENDING",
         items: {
           create: items.map((it) => ({
@@ -391,18 +409,17 @@ export async function placeSmmOfferOrderAction(input: {
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Offer order failed";
     await prisma.$transaction(async (tx) => {
-      // refund whole offer
-      await tx.wallet.update({
-        where: { userId },
-        data: { balanceCents: { increment: chargeCents } },
+      const row = await tx.smmOfferOrder.findUnique({
+        where: { id: created.offerOrderId },
+        select: { chargeCents: true, walletDebitUsdCents: true, walletDebitSyp: true },
       });
-      await tx.walletTransaction.create({
-        data: {
-          walletId: (await tx.wallet.findUnique({ where: { userId }, select: { id: true } }))!.id,
-          type: "CREDIT",
-          amountCents: chargeCents,
-          note: `Refund failed SMM offer (${created.offerOrderId})`,
-        },
+      const { amountCents, amountSyp } = row ? offerOrderRefundCredits(row) : { amountCents: chargeCents, amountSyp: 0 };
+
+      await creditWallet(tx, {
+        userId,
+        amountCents,
+        amountSyp,
+        note: `Refund failed SMM offer (${created.offerOrderId})`,
       });
       await tx.smmOfferOrder.update({ where: { id: created.offerOrderId }, data: { status: "FAILED" } });
     });

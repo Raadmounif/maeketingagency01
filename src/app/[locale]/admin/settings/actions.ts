@@ -73,6 +73,44 @@ export async function updateSocialLinksAction(formData: FormData) {
   return { ok: true as const };
 }
 
+export async function updateWalletExchangeRateAction(formData: FormData) {
+  await requireRole("PLATFORM_ADMIN");
+
+  const raw = String(formData.get("walletSypPerUsd") ?? "").trim();
+  if (!raw.length) {
+    await prisma.siteSettings.upsert({
+      where: { id: 1 },
+      create: { id: 1, walletSypPerUsd: null },
+      update: { walletSypPerUsd: null },
+    });
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+    revalidatePath("/trust");
+    return { ok: true as const };
+  }
+
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    return {
+      ok: false as const,
+      message: "Enter a positive number (Syrian pounds per 1.00 USD), or leave empty to clear the rate.",
+    };
+  }
+
+  await prisma.siteSettings.upsert({
+    where: { id: 1 },
+    create: { id: 1, walletSypPerUsd: n },
+    update: { walletSypPerUsd: n },
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath("/trust");
+  return { ok: true as const };
+}
+
 type MarketingLocale = "en" | "ar";
 
 type MarketingContent = {

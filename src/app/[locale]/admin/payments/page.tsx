@@ -4,6 +4,8 @@ import { Link } from "@/i18n/routing";
 import { getTranslations } from "next-intl/server";
 import PaymentsAdminClient from "./view";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPaymentsPage() {
   const { role } = await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
   const t = await getTranslations("adminPayments.page");
@@ -72,13 +74,18 @@ export default async function AdminPaymentsPage() {
               descriptionMediaUrl: m.descriptionMediaUrl,
               enabled: m.enabled,
               sort: m.sort,
+              minDepositUsdCents: m.minDepositUsdCents,
+              minDepositSyp: m.minDepositSyp,
               updatedAt: m.updatedAt.toISOString(),
             }))}
             requests={requests.map((r) => ({
               id: r.id,
+              trackingCode: r.trackingCode,
               createdAt: r.createdAt.toISOString(),
               status: r.status,
+              amountCurrency: r.amountCurrency,
               amountCents: r.amountCents,
+              amountSyp: r.amountSyp,
               clientNote: r.clientNote,
               proofUrl: r.proofUrl,
               methodName: r.method.name,

@@ -2,7 +2,7 @@ import { Link } from "@/i18n/routing";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
-import { SiteSectionsForm, SocialLinksForm } from "./view";
+import { SiteSectionsForm, SocialLinksForm, WalletExchangeForm } from "./view";
 
 export default async function AdminSettingsPage() {
   await requireRole("PLATFORM_ADMIN");
@@ -55,6 +55,18 @@ export default async function AdminSettingsPage() {
                 marketingContent: settings?.marketingContent ?? null,
               }}
             />
+          </CollapsibleSection>
+        </div>
+
+        <div className="mt-8">
+          <CollapsibleSection id="admin-settings-wallet-fx" title="Wallet exchange rate (USD / SYP)">
+            <p className="mt-2 max-w-2xl text-sm text-[#2C4E7A]/85">
+              Set how many Syrian pounds equal one US dollar. Clients see this next to their balance and the wallet uses
+              it when spending from a mixed USD + SYP balance.
+            </p>
+            <div className="mt-4">
+              <WalletExchangeForm defaultSypPerUsd={settings?.walletSypPerUsd?.toString() ?? ""} />
+            </div>
           </CollapsibleSection>
         </div>
 

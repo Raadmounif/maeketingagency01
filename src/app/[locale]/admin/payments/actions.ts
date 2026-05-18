@@ -1,9 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { parseOptionalMinSyp, parseOptionalMinUsdDollars } from "@/lib/payment-method-minimum";
 import { prisma } from "@/lib/prisma";
+import { revalidatePaymentPaths } from "@/lib/revalidate-payment-paths";
 import { requireRole } from "@/lib/rbac";
-import { creditWallet, debitWallet } from "@/lib/wallet";
+import { paymentRequestIsSyp } from "@/lib/wallet-money";
+import { creditWallet, debitWallet, debitWalletSyp } from "@/lib/wallet";
 
 async function requirePaymentsAdmin() {
   await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
@@ -15,6 +17,8 @@ export async function createPaymentMethodAction(input: {
   descriptionMediaUrl?: string;
   enabled?: boolean;
   sort?: number;
+  minDepositUsd?: string;
+  minDepositSyp?: string;
 }) {
   await requirePaymentsAdmin();
   const name = String(input.name ?? "").trim().slice(0, 255);
@@ -24,11 +28,23 @@ export async function createPaymentMethodAction(input: {
   const enabled = input.enabled !== undefined ? Boolean(input.enabled) : true;
   const sort = Math.floor(Number(input.sort) || 0);
 
+  const minUsd = parseOptionalMinUsdDollars(String(input.minDepositUsd ?? ""));
+  if (!minUsd.ok) return minUsd;
+  const minSyp = parseOptionalMinSyp(String(input.minDepositSyp ?? ""));
+  if (!minSyp.ok) return minSyp;
+
   await prisma.paymentMethod.create({
-    data: { name, descriptionText, descriptionMediaUrl, enabled, sort },
+    data: {
+      name,
+      descriptionText,
+      descriptionMediaUrl,
+      enabled,
+      sort,
+      minDepositUsdCents: minUsd.cents,
+      minDepositSyp: minSyp.syp,
+    },
   });
-  revalidatePath("/admin/payments");
-  revalidatePath("/");
+  revalidatePaymentPaths();
   return { ok: true as const };
 }
 
@@ -39,6 +55,8 @@ export async function updatePaymentMethodAction(input: {
   descriptionMediaUrl?: string;
   enabled?: boolean;
   sort?: number;
+  minDepositUsd?: string;
+  minDepositSyp?: string;
 }) {
   await requirePaymentsAdmin();
   const id = String(input.id ?? "").trim();
@@ -49,6 +67,8 @@ export async function updatePaymentMethodAction(input: {
     descriptionMediaUrl?: string | null;
     enabled?: boolean;
     sort?: number;
+    minDepositUsdCents?: number;
+    minDepositSyp?: number;
   } = {};
   if (input.name !== undefined) {
     const n = String(input.name).trim().slice(0, 255);
@@ -61,10 +81,19 @@ export async function updatePaymentMethodAction(input: {
   }
   if (input.enabled !== undefined) data.enabled = Boolean(input.enabled);
   if (input.sort !== undefined) data.sort = Math.floor(Number(input.sort) || 0);
+  if (input.minDepositUsd !== undefined) {
+    const minUsd = parseOptionalMinUsdDollars(String(input.minDepositUsd));
+    if (!minUsd.ok) return minUsd;
+    data.minDepositUsdCents = minUsd.cents;
+  }
+  if (input.minDepositSyp !== undefined) {
+    const minSyp = parseOptionalMinSyp(String(input.minDepositSyp));
+    if (!minSyp.ok) return minSyp;
+    data.minDepositSyp = minSyp.syp;
+  }
 
   await prisma.paymentMethod.update({ where: { id }, data });
-  revalidatePath("/admin/payments");
-  revalidatePath("/");
+  revalidatePaymentPaths();
   return { ok: true as const };
 }
 
@@ -77,8 +106,7 @@ export async function deletePaymentMethodAction(input: { id: string }) {
   if (cnt > 0) return { ok: false as const, message: "Method has requests; disable it instead." };
 
   await prisma.paymentMethod.delete({ where: { id } });
-  revalidatePath("/admin/payments");
-  revalidatePath("/");
+  revalidatePaymentPaths();
   return { ok: true as const };
 }
 
@@ -95,11 +123,19 @@ export async function approvePaymentRequestAction(input: { id: string }) {
   if (req.status !== "PENDING") return { ok: false as const, message: "Payment is not pending." };
 
   await prisma.$transaction(async (tx) => {
-    await creditWallet(tx, {
-      userId: req.userId,
-      amountCents: req.amountCents,
-      note: `Payment approved (${req.id})`,
-    });
+    if (paymentRequestIsSyp(req)) {
+      await creditWallet(tx, {
+        userId: req.userId,
+        amountSyp: req.amountSyp,
+        note: `Payment approved (${req.id})`,
+      });
+    } else {
+      await creditWallet(tx, {
+        userId: req.userId,
+        amountCents: req.amountCents,
+        note: `Payment approved (${req.id})`,
+      });
+    }
     await tx.paymentRequest.update({
       where: { id: req.id },
       data: {
@@ -110,9 +146,7 @@ export async function approvePaymentRequestAction(input: { id: string }) {
     });
   });
 
-  revalidatePath("/admin/payments");
-  revalidatePath("/dashboard");
-  revalidatePath("/");
+  revalidatePaymentPaths();
   return { ok: true as const };
 }
 
@@ -125,8 +159,7 @@ export async function rejectPaymentRequestAction(input: { id: string }) {
     where: { id },
     data: { status: "REJECTED" },
   });
-  revalidatePath("/admin/payments");
-  revalidatePath("/dashboard");
+  revalidatePaymentPaths();
   return { ok: true as const };
 }
 
@@ -143,11 +176,19 @@ export async function refundPaymentRequestAction(input: { id: string }) {
   if (req.status !== "APPROVED") return { ok: false as const, message: "Only approved payments can be refunded." };
 
   await prisma.$transaction(async (tx) => {
-    await debitWallet(tx, {
-      userId: req.userId,
-      amountCents: req.amountCents,
-      note: `Refund payment (${req.id})`,
-    });
+    if (paymentRequestIsSyp(req)) {
+      await debitWalletSyp(tx, {
+        userId: req.userId,
+        amountSyp: req.amountSyp,
+        note: `Refund payment (${req.id})`,
+      });
+    } else {
+      await debitWallet(tx, {
+        userId: req.userId,
+        amountCents: req.amountCents,
+        note: `Refund payment (${req.id})`,
+      });
+    }
     await tx.paymentRequest.update({
       where: { id: req.id },
       data: {
@@ -158,9 +199,7 @@ export async function refundPaymentRequestAction(input: { id: string }) {
     });
   });
 
-  revalidatePath("/admin/payments");
-  revalidatePath("/dashboard");
-  revalidatePath("/");
+  revalidatePaymentPaths();
   return { ok: true as const };
 }
 

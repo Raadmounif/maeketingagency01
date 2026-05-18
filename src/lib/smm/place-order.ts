@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ensureSmmProviderConfig, getSmmProviderBaseUrl } from "@/lib/smm/provider-config";
 import { providerV2AddOrder, providerV2OrderStatus } from "@/lib/smm/provider-v2";
+import { smmOrderRefundCredits } from "@/lib/wallet-money";
 import { computeChargeCents, creditWallet, debitWallet, getOrCreateWallet } from "@/lib/wallet";
 import { mapProviderOrderStatus } from "@/lib/smm/order-status";
 
@@ -32,7 +33,7 @@ export async function placeSmmProviderOrder(input: {
   if (!baseUrl) throw new Error("Missing provider base URL");
 
   const order = await prisma.$transaction(async (tx) => {
-    await debitWallet(tx, {
+    const split = await debitWallet(tx, {
       userId: input.userId,
       amountCents: chargeCents,
       note: `SMM order (${input.channel})`,
@@ -47,6 +48,8 @@ export async function placeSmmProviderOrder(input: {
         link: input.link,
         quantity: input.quantity,
         chargeCents,
+        walletDebitUsdCents: split.debitedUsdCents,
+        walletDebitSyp: split.debitedSyp,
         status: "PENDING",
       },
     });
@@ -85,9 +88,18 @@ export async function placeSmmProviderOrder(input: {
     const msg = e instanceof Error ? e.message : "Provider order failed";
 
     await prisma.$transaction(async (tx) => {
+      const full = await tx.smmOrder.findUnique({
+        where: { id: order.id },
+        select: { chargeCents: true, walletDebitUsdCents: true, walletDebitSyp: true, userId: true },
+      });
+      const { amountCents, amountSyp } = full
+        ? smmOrderRefundCredits(full)
+        : { amountCents: chargeCents, amountSyp: 0 };
+
       await creditWallet(tx, {
         userId: input.userId,
-        amountCents: chargeCents,
+        amountCents,
+        amountSyp,
         note: `Refund failed SMM order (${order.id})`,
       });
 

@@ -79,8 +79,11 @@ export async function getPaymentsStats() {
     approvedPayments,
     approvedPaymentsList: approvedPaymentsList.map((p) => ({
       id: p.id,
+      trackingCode: p.trackingCode,
       createdAt: p.createdAt.toISOString(),
+      amountCurrency: p.amountCurrency,
       amountCents: p.amountCents,
+      amountSyp: p.amountSyp,
       methodName: p.method.name,
       userEmail: p.user.email,
       userName: p.user.name,

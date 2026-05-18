@@ -43,3 +43,7 @@ next-env.d.ts
 # deploy artifacts / editor project config
 deploy.zip
 .cursor/
+
+# client-uploaded payment proof images (local runtime only)
+/public/uploads/payment-proofs/*
+!/public/uploads/payment-proofs/.gitkeep

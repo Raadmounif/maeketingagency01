@@ -1,77 +1,53 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { createPaymentRequestForUser, savePaymentProofForUser } from "@/lib/payment-requests-core";
+import { revalidatePaymentPaths } from "@/lib/revalidate-payment-paths";
 import { getSession } from "@/lib/session";
+import type { PaymentAmountCurrency } from "@/lib/wallet-money";
 
-function dollarsToCents(usd: number) {
-  if (!Number.isFinite(usd)) return 0;
-  return Math.max(0, Math.ceil(usd * 100 - 1e-9));
+async function requireUserId() {
+  const session = await getSession();
+  const userId = (session?.user as unknown as { id?: string })?.id;
+  if (!userId) return { ok: false as const, message: "You must be signed in." as const };
+  return { ok: true as const, userId };
 }
 
-function isValidHttpUrl(s: string) {
+export async function uploadPaymentProofAction(formData: FormData) {
+  const auth = await requireUserId();
+  if (!auth.ok) return auth;
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size <= 0) {
+    return { ok: false as const, message: "Choose an image to upload." };
+  }
+
   try {
-    const u = new URL(s);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
+    const saved = await savePaymentProofForUser(auth.userId, file);
+    if (!saved.ok) return saved;
+    return { ok: true as const, url: saved.url };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upload failed.";
+    return { ok: false as const, message: msg };
   }
 }
 
 export async function createPaymentRequestAction(input: {
   methodId: string;
-  amountUsd: number;
-  clientNote?: string;
+  amount: number;
+  currency: PaymentAmountCurrency;
+  proofCode?: string;
   proofUrl?: string;
 }) {
-  const session = await getSession();
-  const userId = (session?.user as unknown as { id?: string })?.id;
-  if (!userId) return { ok: false as const, message: "You must be signed in." };
+  const auth = await requireUserId();
+  if (!auth.ok) return auth;
 
-  const methodId = String(input.methodId ?? "").trim();
-  const amountUsd = Number(input.amountUsd);
-  const amountCents = dollarsToCents(amountUsd);
-  if (!methodId) return { ok: false as const, message: "Choose a payment method." };
-  if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
-    return { ok: false as const, message: "Enter a valid amount." };
+  try {
+    const res = await createPaymentRequestForUser(auth.userId, input);
+    if (!res.ok) return res;
+    revalidatePaymentPaths();
+    return { ok: true as const, trackingCode: res.trackingCode };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Could not save payment request.";
+    return { ok: false as const, message: msg };
   }
-
-  const method = await prisma.paymentMethod.findFirst({
-    where: { id: methodId, enabled: true },
-    select: { id: true },
-  });
-  if (!method) return { ok: false as const, message: "Payment method not available." };
-
-  const note = String(input.clientNote ?? "").trim().slice(0, 512) || null;
-  const proofUrlRaw = String(input.proofUrl ?? "").trim().slice(0, 512);
-  const proofUrl = proofUrlRaw.length ? proofUrlRaw : null;
-
-  const textProof = (note ?? "").trim().length >= 3;
-  const photoProof = Boolean(proofUrl && isValidHttpUrl(proofUrl));
-  if (!textProof && !photoProof) {
-    return {
-      ok: false as const,
-      message:
-        "Please add payment proof: paste a screenshot URL (https://…) and/or a short description of your transfer (at least 3 characters).",
-    };
-  }
-  if (proofUrlRaw && !photoProof) {
-    return { ok: false as const, message: "Proof URL must start with http:// or https://." };
-  }
-
-  await prisma.paymentRequest.create({
-    data: {
-      userId,
-      methodId,
-      amountCents,
-      status: "PENDING",
-      clientNote: note,
-      proofUrl: photoProof ? proofUrl : null,
-    },
-  });
-
-  revalidatePath("/dashboard");
-  revalidatePath("/admin/payments");
-  return { ok: true as const };
 }
-

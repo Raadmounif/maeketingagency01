@@ -22,13 +22,24 @@ function prismaClientMatchesSchema(client: PrismaClient): boolean {
   const hasCurrentSiteSettings =
     siteFields?.contactUsUrl === "contactUsUrl" &&
     siteFields?.smmGrowthOrderNotesEn === "smmGrowthOrderNotesEn" &&
-    siteFields?.smmGrowthOrderNotesAr === "smmGrowthOrderNotesAr";
+    siteFields?.smmGrowthOrderNotesAr === "smmGrowthOrderNotesAr" &&
+    siteFields?.walletSypPerUsd === "walletSypPerUsd";
+
+  const paymentFields = Prisma.PaymentRequestScalarFieldEnum as Record<string, string>;
+  const hasPaymentTrackingCode = paymentFields?.trackingCode === "trackingCode";
+
+  const paymentMethodFields = Prisma.PaymentMethodScalarFieldEnum as Record<string, string>;
+  const hasPaymentMethodMinimums =
+    paymentMethodFields?.minDepositUsdCents === "minDepositUsdCents" &&
+    paymentMethodFields?.minDepositSyp === "minDepositSyp";
 
   return (
     typeof c.smmClientCategory?.findMany === "function" &&
     typeof c.customService?.findMany === "function" &&
     hasSmmClientCopy &&
-    hasCurrentSiteSettings
+    hasCurrentSiteSettings &&
+    hasPaymentTrackingCode &&
+    hasPaymentMethodMinimums
   );
 }
 

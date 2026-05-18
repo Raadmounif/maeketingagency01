@@ -4,14 +4,19 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { PaymentTrackingCode } from "@/components/PaymentTrackingCode";
+import { formatPaymentRequestAmount, type PaymentAmountCurrency } from "@/lib/wallet-money";
 
 export type PaymentsStatsSnapshot = {
   pendingPayments: number;
   approvedPayments: number;
   approvedPaymentsList: Array<{
     id: string;
+    trackingCode: string;
     createdAt: string;
+    amountCurrency: PaymentAmountCurrency;
     amountCents: number;
+    amountSyp: number;
     methodName: string;
     userEmail: string;
     userName: string | null;
@@ -104,6 +109,7 @@ export function PaymentsStatsSection({ stats }: { stats: PaymentsStatsSnapshot }
             <table className="min-w-full text-left text-sm">
               <thead className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
                 <tr>
+                  <th className="px-2 py-2">{t("code")}</th>
                   <th className="px-2 py-2">{t("when")}</th>
                   <th className="px-2 py-2">{t("client")}</th>
                   <th className="px-2 py-2">{t("method")}</th>
@@ -115,13 +121,16 @@ export function PaymentsStatsSection({ stats }: { stats: PaymentsStatsSnapshot }
               <tbody>
                 {stats.approvedPaymentsList.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-2 py-3 text-[#2C4E7A]/75">
+                    <td colSpan={7} className="px-2 py-3 text-[#2C4E7A]/75">
                       {t("noApprovedYet")}
                     </td>
                   </tr>
                 ) : (
                   stats.approvedPaymentsList.map((p) => (
                     <tr key={p.id} className="border-t border-[#2C4E7A]/8 align-top">
+                      <td className="px-2 py-2">
+                        <PaymentTrackingCode code={p.trackingCode} />
+                      </td>
                       <td className="whitespace-nowrap px-2 py-2 text-[#2C4E7A]/90">
                         {new Date(p.createdAt).toLocaleString()}
                       </td>
@@ -131,7 +140,7 @@ export function PaymentsStatsSection({ stats }: { stats: PaymentsStatsSnapshot }
                       </td>
                       <td className="px-2 py-2 font-medium text-[#1F3A5F]">{p.methodName}</td>
                       <td className="whitespace-nowrap px-2 py-2 font-semibold text-[#1F3A5F]">
-                        ${formatUsd(p.amountCents)}
+                        {formatPaymentRequestAmount(p)}
                       </td>
                       <td className="max-w-[280px] px-2 py-2 text-[#2C4E7A]/90">
                         {p.clientNote ?? "—"}

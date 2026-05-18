@@ -1,0 +1,3 @@
+ALTER TABLE `PaymentMethod`
+  ADD COLUMN `minDepositUsdCents` INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN `minDepositSyp` INTEGER NOT NULL DEFAULT 0;

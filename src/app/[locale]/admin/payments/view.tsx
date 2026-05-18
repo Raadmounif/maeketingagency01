@@ -2,7 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/routing";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { PaymentTrackingCode } from "@/components/PaymentTrackingCode";
+import { formatPaymentRequestAmount, type PaymentAmountCurrency } from "@/lib/wallet-money";
 import {
   approvePaymentRequestAction,
   createPaymentMethodAction,
@@ -12,10 +15,6 @@ import {
   updatePaymentMethodAction,
 } from "./actions";
 
-function formatUsd(cents: number) {
-  return (cents / 100).toFixed(2);
-}
-
 type MethodRow = {
   id: string;
   name: string;
@@ -23,14 +22,46 @@ type MethodRow = {
   descriptionMediaUrl: string | null;
   enabled: boolean;
   sort: number;
+  minDepositUsdCents: number;
+  minDepositSyp: number;
   updatedAt: string;
 };
 
+function formatMinUsdInput(cents: number) {
+  if (cents <= 0) return "";
+  return (cents / 100).toFixed(2);
+}
+
+function formatMinSypInput(syp: number) {
+  if (syp <= 0) return "";
+  return String(syp);
+}
+
+type PaymentRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "REFUNDED";
+
+function statusPillClass(status: PaymentRequestStatus) {
+  switch (status) {
+    case "APPROVED":
+      return "bg-emerald-100 text-emerald-900 border-emerald-200";
+    case "REJECTED":
+      return "bg-rose-100 text-rose-900 border-rose-200";
+    case "REFUNDED":
+      return "bg-violet-100 text-violet-900 border-violet-200";
+    case "PENDING":
+      return "bg-amber-100 text-amber-900 border-amber-200";
+    default:
+      return "bg-slate-100 text-slate-900 border-slate-200";
+  }
+}
+
 type RequestRow = {
   id: string;
+  trackingCode: string;
   createdAt: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "REFUNDED";
+  status: PaymentRequestStatus;
+  amountCurrency: PaymentAmountCurrency;
   amountCents: number;
+  amountSyp: number;
   methodName: string;
   userEmail: string;
   userName: string | null;
@@ -44,14 +75,26 @@ export default function PaymentsAdminClient(props: {
   requests: RequestRow[];
 }) {
   const t = useTranslations("adminPayments");
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
+
+  function afterRequestAction(ok: boolean, errMsg?: string, successMsg?: string) {
+    if (!ok) {
+      flash(errMsg ?? "Action failed.");
+      return;
+    }
+    if (successMsg) flash(successMsg);
+    router.refresh();
+  }
 
   const [newName, setNewName] = useState("");
   const [newText, setNewText] = useState("");
   const [newMediaUrl, setNewMediaUrl] = useState("");
   const [newEnabled, setNewEnabled] = useState(true);
   const [newSort, setNewSort] = useState("0");
+  const [newMinUsd, setNewMinUsd] = useState("");
+  const [newMinSyp, setNewMinSyp] = useState("");
 
   const [requestFilter, setRequestFilter] = useState<"PENDING" | "APPROVED" | "ALL">("PENDING");
   const filteredRequests = useMemo(() => {
@@ -73,12 +116,12 @@ export default function PaymentsAdminClient(props: {
       ) : null}
 
       <CollapsibleSection id="admin-payments-methods" title={t("methods.sectionTitle")}>
-        <p className="mt-2 text-sm text-[#2C4E7A]/85">
+        <p className="mt-2 text-sm text-[#2C4E7A]">
           {t("methods.help")}
         </p>
 
         <form
-          className="mt-4 grid gap-3 rounded-xl border border-[#2C4E7A]/10 bg-white p-4 md:grid-cols-2"
+          className="mt-4 grid gap-3 rounded-xl border border-[#2C4E7A]/15 bg-[#F5F7FA] p-4 md:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
             startTransition(async () => {
@@ -88,6 +131,8 @@ export default function PaymentsAdminClient(props: {
                 descriptionMediaUrl: newMediaUrl,
                 enabled: newEnabled,
                 sort: Number(newSort),
+                minDepositUsd: newMinUsd,
+                minDepositSyp: newMinSyp,
               });
               if (!res.ok) {
                 flash(res.message);
@@ -98,16 +143,18 @@ export default function PaymentsAdminClient(props: {
               setNewMediaUrl("");
               setNewEnabled(true);
               setNewSort("0");
+              setNewMinUsd("");
+              setNewMinSyp("");
               flash(t("methods.created"));
             });
           }}
         >
           <label className="block md:col-span-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#1F3A5F]">
               {t("methods.name")}
             </div>
             <input
-              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
+              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/25 bg-white px-3 text-sm text-[#1F3A5F]"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               disabled={pending}
@@ -116,22 +163,22 @@ export default function PaymentsAdminClient(props: {
             />
           </label>
           <label className="block md:col-span-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#1F3A5F]">
               {t("methods.descriptionOptional")}
             </div>
             <textarea
-              className="mt-2 min-h-[80px] w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 py-2 text-sm text-[#1F3A5F]"
+              className="mt-2 min-h-[80px] w-full rounded-xl border border-[#2C4E7A]/25 bg-white px-3 py-2 text-sm text-[#1F3A5F]"
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
               disabled={pending}
             />
           </label>
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#1F3A5F]">
               {t("methods.photoUrlOptional")}
             </div>
             <input
-              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
+              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/25 bg-white px-3 text-sm text-[#1F3A5F]"
               value={newMediaUrl}
               onChange={(e) => setNewMediaUrl(e.target.value)}
               disabled={pending}
@@ -140,16 +187,44 @@ export default function PaymentsAdminClient(props: {
             />
           </label>
           <label className="block">
-            <div className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#1F3A5F]">
               {t("methods.sort")}
             </div>
             <input
-              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-[#F5F7FA] px-3 text-sm text-[#1F3A5F]"
+              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/25 bg-white px-3 text-sm text-[#1F3A5F]"
               value={newSort}
               onChange={(e) => setNewSort(e.target.value)}
               disabled={pending}
               inputMode="numeric"
             />
+          </label>
+          <label className="block">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#1F3A5F]">
+              {t("methods.minDepositUsd")}
+            </div>
+            <input
+              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/25 bg-white px-3 text-sm text-[#1F3A5F]"
+              value={newMinUsd}
+              onChange={(e) => setNewMinUsd(e.target.value)}
+              disabled={pending}
+              inputMode="decimal"
+              placeholder={t("methods.minDepositUsdPlaceholder")}
+            />
+            <p className="mt-1 text-xs text-[#2C4E7A]">{t("methods.minDepositUsdHelp")}</p>
+          </label>
+          <label className="block">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[#1F3A5F]">
+              {t("methods.minDepositSyp")}
+            </div>
+            <input
+              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/25 bg-white px-3 text-sm text-[#1F3A5F]"
+              value={newMinSyp}
+              onChange={(e) => setNewMinSyp(e.target.value)}
+              disabled={pending}
+              inputMode="numeric"
+              placeholder={t("methods.minDepositSypPlaceholder")}
+            />
+            <p className="mt-1 text-xs text-[#2C4E7A]">{t("methods.minDepositSypHelp")}</p>
           </label>
           <label className="inline-flex items-center gap-2 text-sm font-semibold text-[#1F3A5F] md:col-span-2">
             <input
@@ -172,13 +247,13 @@ export default function PaymentsAdminClient(props: {
         </form>
 
         <div className="mt-4 overflow-x-auto rounded-lg border border-[#2C4E7A]/12 bg-white">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
+          <table className="min-w-full text-left text-sm text-[#1F3A5F]">
+            <thead className="border-b border-[#2C4E7A]/12 bg-[#E8EEF4] text-xs font-bold uppercase tracking-wide text-[#1F3A5F]">
               <tr>
-                <th className="px-3 py-2">{t("methods.tableName")}</th>
-                <th className="px-3 py-2">{t("methods.tableEnabled")}</th>
-                <th className="px-3 py-2">{t("methods.tableSort")}</th>
-                <th className="px-3 py-2">{t("methods.tablePhotoUrl")}</th>
+                <th className="px-3 py-2.5">{t("methods.tableName")}</th>
+                <th className="bg-[#DCE6F0] px-3 py-2.5">{t("methods.tableEnabled")}</th>
+                <th className="bg-[#DCE6F0] px-3 py-2.5">{t("methods.tableSort")}</th>
+                <th className="px-3 py-2.5">{t("methods.tablePhotoUrl")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -198,9 +273,13 @@ export default function PaymentsAdminClient(props: {
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection id="admin-payments-requests" title={t("requests.sectionTitle")}>
+      <CollapsibleSection
+        id="admin-payments-requests"
+        title={t("requests.sectionTitle")}
+        defaultOpen
+      >
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <p className="text-sm text-[#2C4E7A]/85">
+          <p className="text-sm text-[#2C4E7A]">
             {t("requests.help")}
           </p>
           <label className="text-sm text-[#1F3A5F]">
@@ -219,14 +298,15 @@ export default function PaymentsAdminClient(props: {
         </div>
 
         <div className="mt-4 overflow-x-auto rounded-lg border border-[#2C4E7A]/12 bg-white">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
+          <table className="min-w-full text-left text-sm text-[#1F3A5F]">
+            <thead className="border-b border-[#2C4E7A]/12 bg-[#E8EEF4] text-xs font-bold uppercase tracking-wide text-[#1F3A5F]">
               <tr>
-                <th className="px-3 py-2">{t("requests.tableWhen")}</th>
-                <th className="px-3 py-2">{t("requests.tableClient")}</th>
-                <th className="px-3 py-2">{t("requests.tableMethod")}</th>
-                <th className="px-3 py-2">{t("requests.tableAmount")}</th>
-                <th className="px-3 py-2">{t("requests.tableStatus")}</th>
+                <th className="bg-[#DCE6F0] px-3 py-2.5">{t("requests.tableCode")}</th>
+                <th className="px-3 py-2.5">{t("requests.tableWhen")}</th>
+                <th className="px-3 py-2.5">{t("requests.tableClient")}</th>
+                <th className="bg-[#DCE6F0] px-3 py-2.5">{t("requests.tableMethod")}</th>
+                <th className="bg-[#DCE6F0] px-3 py-2.5">{t("requests.tableAmount")}</th>
+                <th className="bg-[#DCE6F0] px-3 py-2.5">{t("requests.tableStatus")}</th>
                 <th className="px-3 py-2">{t("requests.tableNote")}</th>
                 <th className="px-3 py-2">{t("requests.tableProof")}</th>
                 <th className="px-3 py-2" />
@@ -235,24 +315,38 @@ export default function PaymentsAdminClient(props: {
             <tbody>
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-6 text-center text-[#2C4E7A]/75">
+                  <td colSpan={9} className="px-3 py-6 text-center text-[#2C4E7A]">
                     {t("requests.noRequests")}
                   </td>
                 </tr>
               ) : (
                 filteredRequests.map((r) => (
                   <tr key={r.id} className="border-b border-[#2C4E7A]/8 align-top">
-                    <td className="whitespace-nowrap px-3 py-2 text-[#2C4E7A]/90">
+                    <td className="bg-[#F5F8FB] px-3 py-2">
+                      <PaymentTrackingCode code={r.trackingCode} />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-[#2C4E7A]">
                       {new Date(r.createdAt).toLocaleString()}
                     </td>
-                    <td className="px-3 py-2 text-[#2C4E7A]/90">
+                    <td className="px-3 py-2 text-[#2C4E7A]">
                       <div className="font-medium text-[#1F3A5F]">{r.userEmail}</div>
                       {r.userName ? <div className="text-xs">{r.userName}</div> : null}
                     </td>
-                    <td className="px-3 py-2">{r.methodName}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">${formatUsd(r.amountCents)}</td>
-                    <td className="px-3 py-2 font-semibold">{r.status}</td>
-                    <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]/90">
+                    <td className="bg-[#F5F8FB] px-3 py-2 font-medium text-[#1F3A5F]">{r.methodName}</td>
+                    <td className="bg-[#F5F8FB] px-3 py-2 whitespace-nowrap font-semibold text-[#1F3A5F]">
+                      {formatPaymentRequestAmount(r)}
+                    </td>
+                    <td className="bg-[#F5F8FB] px-3 py-2">
+                      <span
+                        className={[
+                          "inline-flex rounded-md border px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
+                          statusPillClass(r.status),
+                        ].join(" ")}
+                      >
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]">
                       {r.clientNote ?? t("requests.none")}
                     </td>
                     <td className="px-3 py-2">
@@ -279,8 +373,11 @@ export default function PaymentsAdminClient(props: {
                             onClick={() =>
                               startTransition(async () => {
                                 const res = await approvePaymentRequestAction({ id: r.id });
-                                if (!res.ok) flash(res.message);
-                                else flash(t("requests.approvedFlash"));
+                                afterRequestAction(
+                                  res.ok,
+                                  "message" in res ? res.message : undefined,
+                                  res.ok ? t("requests.approvedFlash") : undefined,
+                                );
                               })
                             }
                           >
@@ -293,8 +390,11 @@ export default function PaymentsAdminClient(props: {
                             onClick={() =>
                               startTransition(async () => {
                                 const res = await rejectPaymentRequestAction({ id: r.id });
-                                if (!res.ok) flash(res.message);
-                                else flash(t("requests.rejectedFlash"));
+                                afterRequestAction(
+                                  res.ok,
+                                  "message" in res ? res.message : undefined,
+                                  res.ok ? t("requests.rejectedFlash") : undefined,
+                                );
                               })
                             }
                           >
@@ -310,8 +410,11 @@ export default function PaymentsAdminClient(props: {
                             if (!window.confirm(t("requests.refundConfirm"))) return;
                             startTransition(async () => {
                               const res = await refundPaymentRequestAction({ id: r.id });
-                              if (!res.ok) flash(res.message);
-                              else flash(t("requests.refundedFlash"));
+                              afterRequestAction(
+                                res.ok,
+                                "message" in res ? res.message : undefined,
+                                res.ok ? t("requests.refundedFlash") : undefined,
+                              );
                             });
                           }}
                         >
@@ -343,29 +446,57 @@ function MethodRowEditor(props: {
   const [sort, setSort] = useState(String(props.row.sort));
   const [mediaUrl, setMediaUrl] = useState(props.row.descriptionMediaUrl ?? "");
   const [text, setText] = useState(props.row.descriptionText ?? "");
+  const [minUsd, setMinUsd] = useState(formatMinUsdInput(props.row.minDepositUsdCents));
+  const [minSyp, setMinSyp] = useState(formatMinSypInput(props.row.minDepositSyp));
 
   return (
     <tr className="border-b border-[#2C4E7A]/8 align-top">
       <td className="px-3 py-2">
         <input
-          className="w-full min-w-[180px] rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-full min-w-[180px] rounded border border-[#2C4E7A]/25 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={255}
         />
         <textarea
-          className="mt-2 w-full min-w-[220px] rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="mt-2 w-full min-w-[220px] rounded border border-[#2C4E7A]/25 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
           rows={2}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#1F3A5F]">
+              {t("minDepositUsd")}
+            </span>
+            <input
+              className="mt-1 w-full rounded border border-[#2C4E7A]/25 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
+              value={minUsd}
+              onChange={(e) => setMinUsd(e.target.value)}
+              inputMode="decimal"
+              placeholder={t("minDepositUsdPlaceholder")}
+            />
+          </label>
+          <label className="block">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[#1F3A5F]">
+              {t("minDepositSyp")}
+            </span>
+            <input
+              className="mt-1 w-full rounded border border-[#2C4E7A]/25 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
+              value={minSyp}
+              onChange={(e) => setMinSyp(e.target.value)}
+              inputMode="numeric"
+              placeholder={t("minDepositSypPlaceholder")}
+            />
+          </label>
+        </div>
       </td>
       <td className="px-3 py-2">
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
       </td>
       <td className="px-3 py-2">
         <input
-          className="w-20 rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-20 rounded border border-[#2C4E7A]/25 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
           value={sort}
           onChange={(e) => setSort(e.target.value)}
           inputMode="numeric"
@@ -373,7 +504,7 @@ function MethodRowEditor(props: {
       </td>
       <td className="px-3 py-2">
         <input
-          className="w-full min-w-[220px] rounded border border-[#2C4E7A]/15 px-2 py-1 text-sm"
+          className="w-full min-w-[220px] rounded border border-[#2C4E7A]/25 bg-white px-2 py-1 text-sm text-[#1F3A5F]"
           value={mediaUrl}
           onChange={(e) => setMediaUrl(e.target.value)}
           maxLength={512}
@@ -394,6 +525,8 @@ function MethodRowEditor(props: {
                 descriptionMediaUrl: mediaUrl,
                 enabled,
                 sort: Number(sort),
+                minDepositUsd: minUsd,
+                minDepositSyp: minSyp,
               });
               if (!res.ok) props.onFlash(res.message);
               else props.onFlash(t("saved"));

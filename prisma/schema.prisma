@@ -96,6 +96,9 @@ model SiteSettings {
   smmGrowthOrderNotesEn String? @db.Text
   smmGrowthOrderNotesAr String? @db.Text
 
+  /** Syrian pounds per 1.00 USD for wallet display and automatic debits (admin). */
+  walletSypPerUsd Decimal? @db.Decimal(18, 6)
+
   updatedAt DateTime @updatedAt
 }
 
@@ -206,6 +209,8 @@ model Wallet {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   balanceCents Int @default(0)
+  /** Whole SYP units (not subdivided). */
+  balanceSyp   Int @default(0)
 
   transactions WalletTransaction[]
 
@@ -225,6 +230,8 @@ model WalletTransaction {
 
   type        WalletTxType
   amountCents Int
+  /** Whole SYP moved in this line (same sign semantics as amountCents: positive; DEBIT/CREDIT from type). */
+  sypAmount   Int @default(0)
   note        String? @db.VarChar(512)
 
   createdAt DateTime @default(now())
@@ -240,6 +247,11 @@ model PaymentMethod {
   enabled Boolean @default(true)
   sort    Int     @default(0)
 
+  /** Minimum deposit in USD cents; 0 = no limit. */
+  minDepositUsdCents Int @default(0)
+  /** Minimum deposit in whole SYP; 0 = no limit. */
+  minDepositSyp      Int @default(0)
+
   requests PaymentRequest[]
 
   createdAt DateTime @default(now())
@@ -253,8 +265,16 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum PaymentAmountCurrency {
+  USD
+  SYP
+}
+
 model PaymentRequest {
   id String @id @default(cuid())
+
+  /** Human-readable reference for support (e.g. PAY-A1B2C3D4). */
+  trackingCode String @unique @db.VarChar(16)
 
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -262,7 +282,10 @@ model PaymentRequest {
   methodId String
   method   PaymentMethod @relation(fields: [methodId], references: [id], onDelete: Restrict)
 
-  amountCents Int
+  amountCurrency PaymentAmountCurrency @default(USD)
+  amountCents    Int                   @default(0)
+  /** Whole SYP when amountCurrency is SYP. */
+  amountSyp      Int                   @default(0)
   status PaymentStatus @default(PENDING)
 
   /** Optional note/txid/etc from client. */
@@ -319,6 +342,10 @@ model SmmOrder {
 
   /** Charge to the end-customer (or reseller) in cents. */
   chargeCents Int
+
+  /** Actual wallet debit split (for refunds if provider fails). Legacy rows use chargeCents when both zero. */
+  walletDebitUsdCents Int @default(0)
+  walletDebitSyp      Int @default(0)
 
   providerOrderId Int?
   status          SmmOrderStatus @default(PENDING)
@@ -480,6 +507,9 @@ model SmmOfferOrder {
 
   /** Charged once for the whole offer. */
   chargeCents Int
+  /** Wallet debit split at purchase time (refund path). */
+  walletDebitUsdCents Int @default(0)
+  walletDebitSyp      Int @default(0)
   status      SmmOfferOrderStatus @default(PENDING)
 
   items SmmOfferOrderItem[]
@@ -581,6 +611,9 @@ model CustomServiceOrder {
   totalUsd Decimal @db.Decimal(10, 2)
   /** Optional note from the client when placing the order. */
   clientNote String? @db.VarChar(512)
+
+  walletDebitUsdCents Int @default(0)
+  walletDebitSyp      Int @default(0)
 
   // Optional link from offer manual line item → this order
   offerManualItems SmmOfferOrderManualItem[]

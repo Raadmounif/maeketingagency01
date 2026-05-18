@@ -1,7 +1,17 @@
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { refreshSmmOrderStatusFromProvider } from "@/lib/smm/place-order";
+import {
+  formatSypWhole,
+  formatUsdFromCents,
+  parseWalletSypPerUsd,
+  walletDisplayTotalSyp,
+  walletSpendableUsdCents as computeSpendableUsdCents,
+} from "@/lib/wallet-money";
 import DashboardClient from "./view";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -19,8 +29,23 @@ export default async function DashboardPage() {
     );
   }
 
-  const wallet = await prisma.wallet.findUnique({ where: { userId } });
-  const walletBalanceCents = wallet?.balanceCents ?? 0;
+  const cookieStore = await cookies();
+  const walletDisplayCurrency =
+    cookieStore.get("wallet_display_currency")?.value === "SYP" ? "SYP" : "USD";
+
+  const [wallet, siteFx] = await Promise.all([
+    prisma.wallet.findUnique({ where: { userId } }),
+    prisma.siteSettings.findUnique({ where: { id: 1 }, select: { walletSypPerUsd: true } }),
+  ]);
+  const w = { balanceCents: wallet?.balanceCents ?? 0, balanceSyp: wallet?.balanceSyp ?? 0 };
+  const rate = parseWalletSypPerUsd(siteFx?.walletSypPerUsd);
+  const walletSpendableUsdCents = computeSpendableUsdCents(w, rate);
+  const walletBalanceDisplay =
+    walletDisplayCurrency === "SYP"
+      ? rate > 0
+        ? formatSypWhole(walletDisplayTotalSyp(w, rate))
+        : formatSypWhole(w.balanceSyp)
+      : formatUsdFromCents(walletSpendableUsdCents);
 
   const methods = await prisma.paymentMethod.findMany({
     where: { enabled: true },
@@ -74,18 +99,24 @@ export default async function DashboardPage() {
     <main className="flex-1 bg-white px-4 py-12 md:py-16">
       <div className="mx-auto w-full max-w-6xl">
         <DashboardClient
-          walletBalanceCents={walletBalanceCents}
+          walletBalanceDisplay={walletBalanceDisplay}
+          defaultPaymentCurrency={walletDisplayCurrency}
           methods={methods.map((m) => ({
             id: m.id,
             name: m.name,
             descriptionText: m.descriptionText,
             descriptionMediaUrl: m.descriptionMediaUrl,
+            minDepositUsdCents: m.minDepositUsdCents,
+            minDepositSyp: m.minDepositSyp,
           }))}
           payments={payments.map((p) => ({
             id: p.id,
+            trackingCode: p.trackingCode,
             createdAt: p.createdAt.toISOString(),
             status: p.status,
+            amountCurrency: p.amountCurrency,
             amountCents: p.amountCents,
+            amountSyp: p.amountSyp,
             methodName: p.method.name,
             clientNote: p.clientNote,
             proofUrl: p.proofUrl,

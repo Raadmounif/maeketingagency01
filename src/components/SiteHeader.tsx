@@ -1,10 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { getPathname, Link, usePathname, useRouter } from "@/i18n/routing";
+import { setWalletDisplayCurrencyAction } from "@/lib/wallet-display-currency-action";
+import {
+  formatSypWhole,
+  formatUsdFromCents,
+  walletDisplayTotalSyp,
+  walletSpendableUsdCents,
+} from "@/lib/wallet-money";
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
@@ -33,6 +40,9 @@ function MenuIcon({ open }: { open: boolean }) {
 
 export function SiteHeader(props?: {
   walletBalanceCents: number | null;
+  walletBalanceSyp: number | null;
+  walletSypPerUsd: number;
+  walletDisplayCurrency: "USD" | "SYP";
   contactUsUrl?: string | null;
 }) {
   const pathname = usePathname();
@@ -79,6 +89,9 @@ export function SiteHeader(props?: {
   const isAdmin = role === "PLATFORM_ADMIN";
   const isArabic = locale === "ar";
   const walletBalanceCents = props?.walletBalanceCents ?? null;
+  const walletBalanceSyp = props?.walletBalanceSyp ?? null;
+  const walletSypPerUsd = props?.walletSypPerUsd ?? 0;
+  const walletDisplayCurrency = props?.walletDisplayCurrency === "SYP" ? "SYP" : "USD";
   const contactUsUrl = props?.contactUsUrl?.trim() ?? "";
   const contactLinkClass =
     "inline-flex items-center rounded-xl px-3 py-2 text-sm font-medium text-white/75 transition hover:bg-white/10 hover:text-white";
@@ -111,6 +124,42 @@ export function SiteHeader(props?: {
       (pathname === href || pathname.startsWith(`${href}/`))
     );
   }
+
+  const ribbonBalanceText = useMemo(() => {
+    if (walletBalanceCents === null) return null;
+    const spendableWallet = {
+      balanceCents: walletBalanceCents,
+      balanceSyp: walletBalanceSyp ?? 0,
+    };
+    if (walletDisplayCurrency === "SYP") {
+      if (walletSypPerUsd > 0) {
+        return formatSypWhole(walletDisplayTotalSyp(spendableWallet, walletSypPerUsd));
+      }
+      return formatSypWhole(spendableWallet.balanceSyp);
+    }
+    return formatUsdFromCents(walletSpendableUsdCents(spendableWallet, walletSypPerUsd));
+  }, [walletBalanceCents, walletBalanceSyp, walletDisplayCurrency, walletSypPerUsd]);
+
+  const fxHint =
+    walletSypPerUsd > 0
+      ? `1 USD = ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(walletSypPerUsd)} SYP`
+      : null;
+
+  function pickHeaderCurrency(next: "USD" | "SYP") {
+    if (walletBalanceCents === null || next === walletDisplayCurrency) return;
+    startTransition(() => {
+      void (async () => {
+        await setWalletDisplayCurrencyAction(next);
+        router.refresh();
+      })();
+    });
+  }
+
+  const currencyToggleClass = (active: boolean) =>
+    [
+      "rounded-md px-2 py-1 text-[11px] font-bold transition sm:text-xs",
+      active ? "bg-white text-[#1F3A5F] shadow-sm" : "text-white/80 hover:bg-white/10",
+    ].join(" ");
 
   const navLinkClass = (href: string, mobile = false) =>
     [
@@ -209,10 +258,40 @@ export function SiteHeader(props?: {
                 >
                   {t("nav.welcome", { name: welcomeName })}
                 </span>
-                {walletBalanceCents !== null ? (
-                  <span className="rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-3 py-2 text-sm font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25">
-                    ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
-                  </span>
+                {walletBalanceCents !== null && ribbonBalanceText ? (
+                  <div className="flex max-w-[20rem] items-center gap-1.5 lg:max-w-none">
+                    <div
+                      className="flex shrink-0 rounded-lg border border-white/25 bg-white/10 p-0.5"
+                      role="group"
+                      aria-label={t("nav.walletCurrencyToggle")}
+                    >
+                      <button
+                        type="button"
+                        className={currencyToggleClass(walletDisplayCurrency === "USD")}
+                        onClick={() => pickHeaderCurrency("USD")}
+                      >
+                        USD
+                      </button>
+                      <button
+                        type="button"
+                        className={currencyToggleClass(walletDisplayCurrency === "SYP")}
+                        onClick={() => pickHeaderCurrency("SYP")}
+                      >
+                        SYP
+                      </button>
+                    </div>
+                    <span className="min-w-0 truncate rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-2.5 py-2 text-xs font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25 sm:px-3 sm:text-sm">
+                      {ribbonBalanceText}
+                    </span>
+                    {fxHint ? (
+                      <span
+                        className="hidden min-w-0 truncate text-[10px] font-medium text-white/70 xl:inline xl:max-w-[11rem]"
+                        title={fxHint}
+                      >
+                        {fxHint}
+                      </span>
+                    ) : null}
+                  </div>
                 ) : null}
                 {isAdmin ? (
                   <Link
@@ -388,11 +467,32 @@ export function SiteHeader(props?: {
                 <p className="px-1 text-center text-sm font-medium text-white/90">
                   {t("nav.welcome", { name: welcomeName })}
                 </p>
-                {walletBalanceCents !== null ? (
-                  <div className="flex justify-center px-1">
-                    <span className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-base font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25">
-                      Balance: ${((walletBalanceCents ?? 0) / 100).toFixed(2)}
-                    </span>
+                {walletBalanceCents !== null && ribbonBalanceText ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <div className="flex rounded-lg border border-white/25 bg-white/10 p-0.5" role="group">
+                        <button
+                          type="button"
+                          className={currencyToggleClass(walletDisplayCurrency === "USD")}
+                          onClick={() => pickHeaderCurrency("USD")}
+                        >
+                          USD
+                        </button>
+                        <button
+                          type="button"
+                          className={currencyToggleClass(walletDisplayCurrency === "SYP")}
+                          onClick={() => pickHeaderCurrency("SYP")}
+                        >
+                          SYP
+                        </button>
+                      </div>
+                      <span className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-base font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25">
+                        {ribbonBalanceText}
+                      </span>
+                    </div>
+                    {fxHint ? (
+                      <span className="px-2 text-center text-[11px] font-medium text-white/70">{fxHint}</span>
+                    ) : null}
                   </div>
                 ) : null}
                 {isAdmin ? (
