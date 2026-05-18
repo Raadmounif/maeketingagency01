@@ -12,6 +12,17 @@ import {
   placeSmmOfferOrderAction,
   updateSmmGrowthOrderSectionNotesAction,
 } from "./actions";
+import { SmmCategoryServicePicker } from "./smm-category-service-picker";
+
+function categoryIdForService(
+  categories: Array<{ id: string; services: Array<{ id: string }> }>,
+  serviceId: string,
+): string | null {
+  for (const c of categories) {
+    if (c.services.some((s) => s.id === serviceId)) return c.id;
+  }
+  return null;
+}
 
 function formatUsdFromCents(cents: number) {
   return (cents / 100).toFixed(2);
@@ -94,10 +105,8 @@ export default function TrustClient({
   walletBalanceAmountDisplay,
   showSmmAdminLink,
   orderSectionNotes,
-  platformSuccessfulOrderTotal,
   manualServices,
   clientBundles,
-  topServices,
   topPicks,
 }: {
   categories: Category[];
@@ -111,11 +120,8 @@ export default function TrustClient({
   walletBalanceAmountDisplay: string | null;
   showSmmAdminLink: boolean;
   orderSectionNotes: { en: string; ar: string };
-  /** Completed API orders + completed manual-service orders (all-time). */
-  platformSuccessfulOrderTotal: number;
   manualServices: ManualService[];
   clientBundles: ClientOfferBundle[];
-  topServices: Array<{ id: string; name: string; rate: string; count: number }>;
   topPicks: Array<{ id: string; kind: "API" | "MANUAL" | "OFFER"; refId: string; title: string }>;
 }) {
   const t = useTranslations("smmTrust");
@@ -123,10 +129,16 @@ export default function TrustClient({
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const apiServiceIdFromUrl = searchParams.get("serviceId")?.trim() ?? "";
+  const bootCategoryId =
+    (apiServiceIdFromUrl ? categoryIdForService(categories, apiServiceIdFromUrl) : null) ??
+    (categories.length === 1 ? categories[0]!.id : null);
+
   const [pending, startTransition] = useTransition();
   const [notesPending, startNotesTransition] = useTransition();
   const [status, setStatus] = useState<string | null>(null);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(bootCategoryId);
+  const [selectedServiceId, setSelectedServiceId] = useState(apiServiceIdFromUrl);
   const [link, setLink] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [manualOrderMessage, setManualOrderMessage] = useState<string | null>(null);
@@ -135,6 +147,13 @@ export default function TrustClient({
   const [manualUnits, setManualUnits] = useState("1");
 
   const allServices = useMemo(() => categories.flatMap((c) => c.services), [categories]);
+
+  const pickerCategoryId = useMemo(() => {
+    if (selectedCategoryId) return selectedCategoryId;
+    if (selectedServiceId) return categoryIdForService(categories, selectedServiceId);
+    if (categories.length === 1) return categories[0]!.id;
+    return null;
+  }, [selectedCategoryId, selectedServiceId, categories]);
 
   const selectedService = useMemo(
     () => allServices.find((s) => s.id === selectedServiceId) ?? null,
@@ -165,6 +184,8 @@ export default function TrustClient({
 
     if (apiServiceId) {
       setSelectedServiceId(apiServiceId);
+      const catId = categoryIdForService(categories, apiServiceId);
+      if (catId) setSelectedCategoryId(catId);
       requestAnimationFrame(() => {
         document.getElementById("order-now")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
@@ -443,7 +464,6 @@ export default function TrustClient({
             <h2 className="text-2xl font-bold tracking-tight text-[#1F3A5F] sm:text-3xl">
               {t("order.sectionTitle")}
             </h2>
-            <p className="mt-2 text-sm text-[#2C4E7A]/85 sm:text-base">{t("order.sectionHelp")}</p>
           </div>
           {showSmmAdminLink ? (
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -455,10 +475,6 @@ export default function TrustClient({
               </Link>
             </div>
           ) : null}
-        </div>
-
-        <div className="mt-4 rounded-xl border border-[#2C4E7A]/10 bg-white px-4 py-3 text-sm leading-relaxed text-[#2C4E7A]/90">
-          {t("order.guestBrowseHint")}
         </div>
 
         {isAuthenticated && walletBalanceAmountDisplay !== null ? (
@@ -474,48 +490,6 @@ export default function TrustClient({
           </div>
         ) : null}
 
-        {topServices.length ? (
-          <section className="mt-5 rounded-xl border border-[#2C4E7A]/10 bg-white p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm font-semibold text-[#1F3A5F]">
-                {t("topServices.title")}
-              </div>
-              <div className="flex flex-col items-start gap-1 sm:items-end">
-                <div className="text-xs text-[#2C4E7A]/75">{t("topServices.subtitle")}</div>
-                {platformSuccessfulOrderTotal > 0 ? (
-                  <div className="text-xs font-medium text-[#1F3A5F]">
-                    {t("topServices.platformSuccessTotal", { count: platformSuccessfulOrderTotal })}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {topServices.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className="group flex items-center justify-between gap-3 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] px-4 py-3 text-left transition hover:border-[#2C4E7A]/20 hover:bg-white"
-                  onClick={() => {
-                    setSelectedServiceId(s.id);
-                    setStatus(null);
-                  }}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-[#1F3A5F]">
-                      {s.name}
-                    </div>
-                    <div className="mt-1 text-xs text-[#2C4E7A]/75">
-                      {t("topServices.orders", { count: s.count })}
-                    </div>
-                  </div>
-                  <div className="shrink-0 rounded-lg border border-[#2C4E7A]/15 bg-white px-2.5 py-1 text-xs font-semibold text-[#1F3A5F]">
-                    ${s.rate}/1000
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         {clientBundles.length > 0 ? (
           <section
@@ -571,25 +545,92 @@ export default function TrustClient({
           </section>
         ) : null}
 
+        <section
+          id="manual-services"
+          className="mt-6 scroll-mt-28 rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm sm:p-6"
+        >
+          <h2 className="text-xl font-bold tracking-tight text-[#1F3A5F] sm:text-2xl">
+            {t("manualServices.sectionTitle")}
+          </h2>
+          {t("manualServices.sectionHelp").trim() ? (
+            <p className="mt-2 text-sm text-[#2C4E7A]/85 sm:text-base">
+              {t("manualServices.sectionHelp")}
+            </p>
+          ) : null}
+
+          {manualOrderMessage ? (
+            <div className="mt-4 rounded-lg border border-[#2C4E7A]/15 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F]">
+              {manualOrderMessage}
+            </div>
+          ) : null}
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {manualServices.length === 0 ? (
+              <p className="col-span-full text-center text-sm text-[#2C4E7A]/80">
+                {t("manualServices.empty")}
+              </p>
+            ) : (
+              manualServices.map((s) => (
+                <article
+                  key={s.id}
+                  className="flex flex-col rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-5"
+                >
+                  <h3 className="text-base font-semibold text-[#1F3A5F]">{s.name}</h3>
+                  <p className="mt-2 flex-1 whitespace-pre-wrap text-sm text-[#2C4E7A]/90">
+                    {s.description}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <span className="text-lg font-bold text-[#1F3A5F]">
+                      ${s.unitPriceUsd} <span className="text-sm font-semibold text-[#2C4E7A]/70">/ unit</span>
+                    </span>
+                    {isAuthenticated ? (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => {
+                          setManualLink("");
+                          setManualUnits("1");
+                          setManualModalService(s);
+                        }}
+                        className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
+                      >
+                        {t("manualServices.order")}
+                      </button>
+                    ) : (
+                      <Link
+                        href="/login"
+                        className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#2C4E7A]/25 bg-white px-4 text-sm font-semibold text-[#1F3A5F] transition hover:bg-white/80"
+                      >
+                        {t("manualServices.loginToOrder")}
+                      </Link>
+                    )}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+
         <div
           id="order-now"
           className="mt-6 scroll-mt-28 grid gap-3 rounded-xl border border-[#2C4E7A]/12 bg-[#F5F7FA] p-5 shadow-sm sm:grid-cols-3"
         >
-          <label className="block sm:col-span-1">
-            <div className="text-sm font-semibold text-[#1F3A5F]">{t("order.service")}</div>
-            <select
-              value={selectedServiceId}
-              onChange={(e) => setSelectedServiceId(e.target.value)}
-              className="mt-2 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
-            >
-              <option value="">{t("order.chooseService")}</option>
-              {allServices.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} (${s.rate}/1000)
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="sm:col-span-3">
+            <SmmCategoryServicePicker
+              categories={categories}
+              selectedCategoryId={pickerCategoryId}
+              selectedServiceId={selectedServiceId}
+              onCategoryChange={(id) => {
+                setSelectedCategoryId(id);
+                setSelectedServiceId("");
+                setStatus(null);
+              }}
+              onServiceChange={(id) => {
+                setSelectedServiceId(id);
+                setStatus(null);
+              }}
+            />
+          </div>
 
           {selectedService?.description ? (
             <div className="sm:col-span-3 rounded-xl border border-[#2C4E7A]/10 bg-white px-4 py-3 text-sm leading-relaxed text-[#2C4E7A]/90">
@@ -722,72 +763,6 @@ export default function TrustClient({
             ) : null}
           </div>
         ) : null}
-
-        <section
-          id="manual-services"
-          className="mt-12 scroll-mt-28 rounded-xl border border-[#2C4E7A]/12 bg-white p-5 shadow-sm sm:p-6"
-        >
-          <h2 className="text-xl font-bold tracking-tight text-[#1F3A5F] sm:text-2xl">
-            {t("manualServices.sectionTitle")}
-          </h2>
-          {t("manualServices.sectionHelp").trim() ? (
-            <p className="mt-2 text-sm text-[#2C4E7A]/85 sm:text-base">
-              {t("manualServices.sectionHelp")}
-            </p>
-          ) : null}
-
-          {manualOrderMessage ? (
-            <div className="mt-4 rounded-lg border border-[#2C4E7A]/15 bg-[#F5F7FA] px-4 py-3 text-sm text-[#1F3A5F]">
-              {manualOrderMessage}
-            </div>
-          ) : null}
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {manualServices.length === 0 ? (
-              <p className="col-span-full text-center text-sm text-[#2C4E7A]/80">
-                {t("manualServices.empty")}
-              </p>
-            ) : (
-              manualServices.map((s) => (
-                <article
-                  key={s.id}
-                  className="flex flex-col rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-5"
-                >
-                  <h3 className="text-base font-semibold text-[#1F3A5F]">{s.name}</h3>
-                  <p className="mt-2 flex-1 whitespace-pre-wrap text-sm text-[#2C4E7A]/90">
-                    {s.description}
-                  </p>
-                  <div className="mt-4 flex items-center justify-between gap-3">
-                    <span className="text-lg font-bold text-[#1F3A5F]">
-                      ${s.unitPriceUsd} <span className="text-sm font-semibold text-[#2C4E7A]/70">/ unit</span>
-                    </span>
-                    {isAuthenticated ? (
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => {
-                          setManualLink("");
-                          setManualUnits("1");
-                          setManualModalService(s);
-                        }}
-                        className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
-                      >
-                        {t("manualServices.order")}
-                      </button>
-                    ) : (
-                      <Link
-                        href="/login"
-                        className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-[#2C4E7A]/25 bg-white px-4 text-sm font-semibold text-[#1F3A5F] transition hover:bg-white/80"
-                      >
-                        {t("manualServices.loginToOrder")}
-                      </Link>
-                    )}
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
       </section>
 
       {bundleModal ? (

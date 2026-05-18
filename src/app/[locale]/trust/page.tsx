@@ -181,40 +181,6 @@ export default async function TrustPage() {
 
   const visibleCategories = categories.filter((c) => c.services.length > 0);
 
-  const [apiCompletedCount, manualDoneCount] = await Promise.all([
-    prisma.smmOrder.count({ where: { status: "COMPLETED" } }),
-    prisma.customServiceOrder.count({ where: { status: "DONE" } }),
-  ]);
-  const platformSuccessfulOrderTotal = apiCompletedCount + manualDoneCount;
-
-  const topOrdered = await prisma.smmOrder.groupBy({
-    by: ["serviceId"],
-    _count: { serviceId: true },
-    orderBy: { _count: { serviceId: "desc" } },
-    take: 10,
-    where: { status: "COMPLETED" },
-  });
-  const topServiceIds = topOrdered.map((t) => t.serviceId);
-  const topServicesRaw = topServiceIds.length
-    ? await prisma.smmService.findMany({
-        where: { id: { in: topServiceIds }, enabledForClients: true, isArchived: false },
-      })
-    : [];
-  const topServiceById = new Map(topServicesRaw.map((s) => [s.id, s]));
-  const topServices = topOrdered
-    .map((t) => {
-      const s = topServiceById.get(t.serviceId);
-      if (!s) return null;
-      const rate = listedRateForService(s);
-      return {
-        id: s.id,
-        name: s.clientTitle?.trim() || s.providerName,
-        rate,
-        count: t._count.serviceId,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x != null);
-
   const localeKey = locale === "ar" ? "ar" : "en";
 
   const clientCategoriesForBundles = await prisma.smmClientCategory.findMany({
@@ -296,14 +262,12 @@ export default async function TrustPage() {
       accountPricingDiscountPct={accountPricingDiscountPct}
       showSmmAdminLink={showSmmAdminLink}
       orderSectionNotes={orderSectionNotes}
-      platformSuccessfulOrderTotal={platformSuccessfulOrderTotal}
       isAuthenticated={Boolean(session?.user)}
       walletSpendableUsdCents={walletSpendableUsdCents}
       walletBalanceAmountDisplay={walletBalanceAmountDisplay}
       adBoard={adBoard}
       manualServices={manualServicesPayload}
       clientBundles={clientBundles}
-      topServices={topServices}
       topPicks={topPicks}
       categories={visibleCategories.map((c) => ({
         id: c.id,
