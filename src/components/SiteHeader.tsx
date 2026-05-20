@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { getPathname, Link, usePathname, useRouter } from "@/i18n/routing";
@@ -35,6 +35,92 @@ function ContactUsLink({
     >
       {children}
     </a>
+  );
+}
+
+function WalletRibbonBlock({
+  walletDisplayCurrency,
+  ribbonBalanceText,
+  fxHint,
+  onPickCurrency,
+  toggleLabel,
+}: {
+  walletDisplayCurrency: "USD" | "SYP";
+  ribbonBalanceText: string;
+  fxHint: string | null;
+  onPickCurrency: (next: "USD" | "SYP") => void;
+  toggleLabel: string;
+}) {
+  const [fxOpen, setFxOpen] = useState(false);
+  const blockRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!fxOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      if (blockRef.current && !blockRef.current.contains(e.target as Node)) {
+        setFxOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [fxOpen]);
+
+  const compactToggleClass = (active: boolean) =>
+    [
+      "rounded px-1.5 py-0.5 text-[10px] font-bold leading-none transition",
+      active ? "bg-white text-[#1F3A5F] shadow-sm" : "text-white/80 hover:bg-white/10",
+    ].join(" ");
+
+  const balanceClass =
+    "w-full truncate rounded-md bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-2 py-1 text-[11px] font-semibold tabular-nums text-[#1F3A5F] shadow-sm shadow-orange-900/20 sm:text-xs";
+
+  return (
+    <div ref={blockRef} className="relative shrink-0">
+      {fxOpen && fxHint ? (
+        <div
+          role="tooltip"
+          className="absolute bottom-full left-1/2 z-10 mb-1 w-max max-w-[12rem] -translate-x-1/2 rounded-md border border-white/20 bg-[#152d4d] px-2 py-1 text-center text-[10px] font-medium leading-tight text-white/90 shadow-lg"
+        >
+          {fxHint}
+        </div>
+      ) : null}
+
+      {fxHint ? (
+        <button
+          type="button"
+          className={balanceClass}
+          aria-expanded={fxOpen}
+          aria-label={`${ribbonBalanceText}. ${fxHint}`}
+          title={fxHint}
+          onClick={() => setFxOpen((v) => !v)}
+        >
+          {ribbonBalanceText}
+        </button>
+      ) : (
+        <span className={`block ${balanceClass}`}>{ribbonBalanceText}</span>
+      )}
+
+      <div
+        className="mt-1 flex justify-center rounded-md border border-white/15 bg-white/5 p-0.5"
+        role="group"
+        aria-label={toggleLabel}
+      >
+        <button
+          type="button"
+          className={compactToggleClass(walletDisplayCurrency === "USD")}
+          onClick={() => onPickCurrency("USD")}
+        >
+          USD
+        </button>
+        <button
+          type="button"
+          className={compactToggleClass(walletDisplayCurrency === "SYP")}
+          onClick={() => onPickCurrency("SYP")}
+        >
+          SYP
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -119,7 +205,15 @@ export function SiteHeader(props?: {
   const walletDisplayCurrency = props?.walletDisplayCurrency === "SYP" ? "SYP" : "USD";
   const contactUsUrl = props?.contactUsUrl?.trim() ?? "mailto:hello@palmyrashift.com";
   const contactBtnClass =
-    "inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-white/30 bg-white/10 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-white/20 active:bg-white/25";
+    "inline-flex min-h-9 shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 px-2 py-1.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-white/20 active:bg-white/25 sm:text-[11px] md:min-h-10 md:rounded-xl md:px-3 md:text-sm";
+
+  const mobileNavLinkClass = (href: string) =>
+    [
+      "shrink-0 rounded-md px-1 py-1.5 text-[10px] font-semibold leading-tight transition sm:px-1.5 sm:text-[11px]",
+      linkActive(href)
+        ? "bg-white/15 text-white"
+        : "text-white/85 hover:bg-white/10 hover:text-white",
+    ].join(" ");
 
   const welcomeName = (() => {
     const u = data?.user;
@@ -180,12 +274,6 @@ export function SiteHeader(props?: {
     });
   }
 
-  const currencyToggleClass = (active: boolean) =>
-    [
-      "rounded-md px-2 py-1 text-[11px] font-bold transition sm:text-xs",
-      active ? "bg-white text-[#1F3A5F] shadow-sm" : "text-white/80 hover:bg-white/10",
-    ].join(" ");
-
   const navLinkClass = (href: string, mobile = false) =>
     [
       mobile ? "min-h-12 w-full justify-between px-4 text-base" : "px-3 py-2 text-sm",
@@ -219,31 +307,45 @@ export function SiteHeader(props?: {
             </button>
           ) : null}
           <Link
-          href="/"
-          className="flex min-w-0 shrink items-center gap-2 sm:gap-3"
-          onClick={() => {
-            setMenuOpen(false);
-            setDashNavOpen(false);
-          }}
-        >
-          <Image
-            src="/brand/palmyrashift-logo.png"
-            alt="PalmyraShift"
-            width={40}
-            height={40}
-            className="h-9 w-9 shrink-0 rounded-lg bg-white/95 object-contain p-0.5 sm:h-10 sm:w-10"
-            priority
-          />
-          <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-semibold tracking-tight text-white">
+            href="/"
+            className="flex shrink-0 flex-col items-center gap-0.5 sm:gap-1"
+            onClick={() => {
+              setMenuOpen(false);
+              setDashNavOpen(false);
+            }}
+          >
+            <Image
+              src="/brand/palmyrashift-logo.png"
+              alt="PalmyraShift"
+              width={40}
+              height={40}
+              className="h-9 w-9 shrink-0 rounded-lg bg-white/95 object-contain p-0.5 sm:h-10 sm:w-10"
+              priority
+            />
+            <span className="max-w-[5.5rem] truncate text-center text-[11px] font-semibold leading-tight tracking-tight text-white sm:max-w-none sm:text-xs">
               PalmyraShift
-            </div>
-            <div className="truncate text-[11px] text-white/65 sm:text-xs">
-              palmyrashift.com
-            </div>
-          </div>
-        </Link>
+            </span>
+          </Link>
         </div>
+
+        <nav
+          className="flex min-w-0 flex-1 items-center justify-center gap-0.5 sm:gap-1 md:hidden"
+          aria-label="Main"
+        >
+          {links.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={mobileNavLinkClass(l.href)}
+              onClick={() => {
+                setMenuOpen(false);
+                setDashNavOpen(false);
+              }}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
           {links.map((l) => (
@@ -253,14 +355,14 @@ export function SiteHeader(props?: {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5 md:gap-2">
           <ContactUsLink href={contactUsUrl} className={`${contactBtnClass} md:hidden`}>
             {t("nav.contactUs")}
           </ContactUsLink>
           <button
             type="button"
             onClick={switchLocale}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-2.5 text-sm font-semibold text-white active:bg-white/20 sm:min-h-10 sm:min-w-10 sm:px-3"
+            className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-2 text-[11px] font-semibold text-white active:bg-white/20 sm:min-h-10 sm:min-w-10 md:min-h-10 md:min-w-10 md:rounded-xl md:px-2.5 md:text-sm"
             aria-label={isArabic ? "Switch to English" : "Switch to Arabic"}
             title={isArabic ? "English" : "العربية"}
           >
@@ -274,45 +376,20 @@ export function SiteHeader(props?: {
             {data?.user ? (
               <>
                 <span
-                  className="max-w-[11rem] truncate text-sm font-medium text-white/90 lg:max-w-[14rem]"
+                  className="flex max-w-[11rem] flex-col leading-tight text-white/90 lg:max-w-[14rem]"
                   title={welcomeName}
                 >
-                  {t("nav.welcome", { name: welcomeName })}
+                  <span className="text-xs font-medium text-white/75">{t("nav.welcomeGreeting")}</span>
+                  <span className="truncate text-sm font-semibold text-white">{welcomeName}</span>
                 </span>
                 {walletBalanceCents !== null && ribbonBalanceText ? (
-                  <div className="flex max-w-[20rem] items-center gap-1.5 lg:max-w-none">
-                    <div
-                      className="flex shrink-0 rounded-lg border border-white/25 bg-white/10 p-0.5"
-                      role="group"
-                      aria-label={t("nav.walletCurrencyToggle")}
-                    >
-                      <button
-                        type="button"
-                        className={currencyToggleClass(walletDisplayCurrency === "USD")}
-                        onClick={() => pickHeaderCurrency("USD")}
-                      >
-                        USD
-                      </button>
-                      <button
-                        type="button"
-                        className={currencyToggleClass(walletDisplayCurrency === "SYP")}
-                        onClick={() => pickHeaderCurrency("SYP")}
-                      >
-                        SYP
-                      </button>
-                    </div>
-                    <span className="min-w-0 truncate rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-2.5 py-2 text-xs font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25 sm:px-3 sm:text-sm">
-                      {ribbonBalanceText}
-                    </span>
-                    {fxHint ? (
-                      <span
-                        className="hidden min-w-0 truncate text-[10px] font-medium text-white/70 xl:inline xl:max-w-[11rem]"
-                        title={fxHint}
-                      >
-                        {fxHint}
-                      </span>
-                    ) : null}
-                  </div>
+                  <WalletRibbonBlock
+                    walletDisplayCurrency={walletDisplayCurrency}
+                    ribbonBalanceText={ribbonBalanceText}
+                    fxHint={fxHint}
+                    onPickCurrency={pickHeaderCurrency}
+                    toggleLabel={t("nav.walletCurrencyToggle")}
+                  />
                 ) : null}
                 {isAdmin ? (
                   <Link
@@ -452,65 +529,22 @@ export function SiteHeader(props?: {
           aria-modal="true"
           aria-label="Menu"
         >
-          <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain py-2">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={navLinkClass(l.href, true)}
-                onClick={() => setMenuOpen(false)}
-              >
-                <span>{l.label}</span>
-                <span aria-hidden className="text-white/40">
-                  →
-                </span>
-              </Link>
-            ))}
-            <ContactUsLink
-              href={contactUsUrl}
-              className={navLinkClass(contactUsUrl, true)}
-              onClick={() => setMenuOpen(false)}
-            >
-              <span>{t("nav.contactUs")}</span>
-              <span aria-hidden className="text-white/40">
-                {contactUsUrl.startsWith("mailto:") ? "✉" : "↗"}
-              </span>
-            </ContactUsLink>
-          </nav>
-
-          <div className="shrink-0 flex flex-col gap-2 border-t border-white/10 pt-4">
+          <div className="flex min-h-0 flex-1 flex-col justify-end">
+          <div className="shrink-0 flex flex-col gap-2 pt-2">
             {data?.user ? (
               <>
-                <p className="px-1 text-center text-sm font-medium text-white/90">
-                  {t("nav.welcome", { name: welcomeName })}
+                <p className="flex flex-col items-center px-1 text-center leading-tight">
+                  <span className="text-xs font-medium text-white/75">{t("nav.welcomeGreeting")}</span>
+                  <span className="text-sm font-semibold text-white/90">{welcomeName}</span>
                 </p>
                 {walletBalanceCents !== null && ribbonBalanceText ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <div className="flex rounded-lg border border-white/25 bg-white/10 p-0.5" role="group">
-                        <button
-                          type="button"
-                          className={currencyToggleClass(walletDisplayCurrency === "USD")}
-                          onClick={() => pickHeaderCurrency("USD")}
-                        >
-                          USD
-                        </button>
-                        <button
-                          type="button"
-                          className={currencyToggleClass(walletDisplayCurrency === "SYP")}
-                          onClick={() => pickHeaderCurrency("SYP")}
-                        >
-                          SYP
-                        </button>
-                      </div>
-                      <span className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-base font-semibold tabular-nums text-[#1F3A5F] shadow-md shadow-orange-900/25">
-                        {ribbonBalanceText}
-                      </span>
-                    </div>
-                    {fxHint ? (
-                      <span className="px-2 text-center text-[11px] font-medium text-white/70">{fxHint}</span>
-                    ) : null}
-                  </div>
+                  <WalletRibbonBlock
+                    walletDisplayCurrency={walletDisplayCurrency}
+                    ribbonBalanceText={ribbonBalanceText}
+                    fxHint={fxHint}
+                    onPickCurrency={pickHeaderCurrency}
+                    toggleLabel={t("nav.walletCurrencyToggle")}
+                  />
                 ) : null}
                 {isAdmin ? (
                   <Link
@@ -551,6 +585,7 @@ export function SiteHeader(props?: {
                 </Link>
               </>
             )}
+          </div>
           </div>
         </div>
       ) : null}

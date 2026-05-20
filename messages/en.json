@@ -1,6 +1,7 @@
 {
   "nav": {
     "welcome": "Welcome, {name}",
+    "welcomeGreeting": "Welcome",
     "welcomeFallback": "Guest",
     "services": "Services",
     "about": "About",

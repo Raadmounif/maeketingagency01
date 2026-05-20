@@ -1,11 +1,12 @@
 {
   "nav": {
     "welcome": "مرحبًا، {name}",
+    "welcomeGreeting": "مرحبًا",
     "welcomeFallback": "ضيف",
     "services": "الخدمات",
     "about": "من نحن",
     "proof": "النتائج",
-    "trustGrowth": "نمو التسويق عبر السوشيال",
+    "trustGrowth": "نمو السوشيال",
     "dashboard": "لوحة التحكم",
     "admin": "الإدارة",
     "login": "تسجيل الدخول",
@@ -254,7 +255,7 @@
     "title": "الإدارة",
     "subtitle": "منطقة إدارة المنصة (محمية بنظام الصلاحيات).",
     "manageUsersRoles": "إدارة المستخدمين والأدوار",
-    "smmGrowth": "نمو التسويق عبر السوشيال",
+    "smmGrowth": "نمو السوشيال",
     "paymentsAndOrders": "المدفوعات والطلبات",
     "payments": "إعدادات الدفع",
     "siteSettings": "إعدادات الموقع",
