@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import {
   createCustomServiceAction,
@@ -38,6 +39,7 @@ export default function ManualServicesAdminClient(props: {
   services: ServiceRow[];
   orders: OrderRow[];
 }) {
+  const t = useTranslations("adminManualServices");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
@@ -65,10 +67,8 @@ export default function ManualServicesAdminClient(props: {
         </div>
       ) : null}
 
-      <CollapsibleSection id="admin-manual-add" title="Add a service">
-        <p className="mt-2 text-sm text-[#2C4E7A]/85">
-          Name, description, and price per 1 unit (USD). These are separate from the SMM API catalog.
-        </p>
+      <CollapsibleSection id="admin-manual-add" title={t("add.sectionTitle")}>
+        <p className="mt-2 text-sm text-[#2C4E7A]/85">{t("add.help")}</p>
         <form
           className="mt-4 grid gap-3 md:grid-cols-2"
           onSubmit={(e) => {
@@ -86,13 +86,13 @@ export default function ManualServicesAdminClient(props: {
               setNewName("");
               setNewDescription("");
               setNewUnitPrice("");
-              flash("Service created.");
+              flash(t("flash.serviceCreated"));
             });
           }}
         >
           <label className="block md:col-span-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Name
+              {t("add.name")}
             </span>
             <input
               className="mt-1 w-full rounded-lg border border-[#2C4E7A]/20 bg-white px-3 py-2 text-sm text-[#1F3A5F]"
@@ -104,7 +104,7 @@ export default function ManualServicesAdminClient(props: {
           </label>
           <label className="block md:col-span-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Description
+              {t("add.description")}
             </span>
             <textarea
               className="mt-1 min-h-[88px] w-full rounded-lg border border-[#2C4E7A]/20 bg-white px-3 py-2 text-sm text-[#1F3A5F]"
@@ -115,7 +115,7 @@ export default function ManualServicesAdminClient(props: {
           </label>
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
-              Price per 1 unit (USD)
+              {t("add.unitPrice")}
             </span>
             <input
               type="number"
@@ -133,22 +133,22 @@ export default function ManualServicesAdminClient(props: {
               disabled={pending}
               className="inline-flex h-10 items-center justify-center rounded-lg bg-[#1F3A5F] px-4 text-sm font-semibold text-white transition hover:bg-[#2C4E7A] disabled:opacity-60"
             >
-              {pending ? "Saving…" : "Add service"}
+              {pending ? t("add.saving") : t("add.submit")}
             </button>
           </div>
         </form>
       </CollapsibleSection>
 
-      <CollapsibleSection id="admin-manual-services" title="Services">
+      <CollapsibleSection id="admin-manual-services" title={t("services.sectionTitle")}>
         <div className="mt-3 overflow-x-auto rounded-lg border border-[#2C4E7A]/12 bg-white">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Description</th>
-                <th className="px-3 py-2">Unit price</th>
-                <th className="px-3 py-2">Sort</th>
-                <th className="px-3 py-2">On</th>
+                <th className="px-3 py-2">{t("services.tableName")}</th>
+                <th className="px-3 py-2">{t("services.tableDescription")}</th>
+                <th className="px-3 py-2">{t("services.tableUnitPrice")}</th>
+                <th className="px-3 py-2">{t("services.tableSort")}</th>
+                <th className="px-3 py-2">{t("services.tableEnabled")}</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -156,7 +156,7 @@ export default function ManualServicesAdminClient(props: {
               {props.services.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-center text-[#2C4E7A]/75">
-                    No manual services yet.
+                    {t("services.noServices")}
                   </td>
                 </tr>
               ) : (
@@ -175,22 +175,19 @@ export default function ManualServicesAdminClient(props: {
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection id="admin-manual-orders" title="Orders board">
+      <CollapsibleSection id="admin-manual-orders" title={t("orders.sectionTitle")}>
         <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <p className="text-sm text-[#2C4E7A]/85">
-            New requests start as <strong>Ordered</strong>. Mark <strong>Done</strong> when you finish
-            the work.
-          </p>
+          <p className="text-sm text-[#2C4E7A]/85">{t("orders.help")}</p>
           <label className="text-sm text-[#1F3A5F]">
-            <span className="mr-2 font-medium">Show</span>
+            <span className="mr-2 font-medium">{t("orders.show")}</span>
             <select
               className="rounded-lg border border-[#2C4E7A]/20 bg-white px-3 py-2"
               value={orderFilter}
               onChange={(e) => setOrderFilter(e.target.value as typeof orderFilter)}
             >
-              <option value="ORDERED">Ordered only</option>
-              <option value="DONE">Done only</option>
-              <option value="ALL">All</option>
+              <option value="ORDERED">{t("orders.filterOrdered")}</option>
+              <option value="DONE">{t("orders.filterDone")}</option>
+              <option value="ALL">{t("orders.filterAll")}</option>
             </select>
           </label>
         </div>
@@ -199,21 +196,21 @@ export default function ManualServicesAdminClient(props: {
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-[#2C4E7A]/12 bg-[#F5F7FA] text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/80">
               <tr>
-                <th className="px-3 py-2">When</th>
-                <th className="px-3 py-2">Service</th>
-                <th className="px-3 py-2">Client</th>
-                <th className="px-3 py-2">URL</th>
-                <th className="px-3 py-2">Units</th>
-                <th className="px-3 py-2">Total</th>
-                <th className="px-3 py-2">Note</th>
-                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">{t("orders.tableWhen")}</th>
+                <th className="px-3 py-2">{t("orders.tableService")}</th>
+                <th className="px-3 py-2">{t("orders.tableClient")}</th>
+                <th className="px-3 py-2">{t("orders.tableUrl")}</th>
+                <th className="px-3 py-2">{t("orders.tableUnits")}</th>
+                <th className="px-3 py-2">{t("orders.tableTotal")}</th>
+                <th className="px-3 py-2">{t("orders.tableNote")}</th>
+                <th className="px-3 py-2">{t("orders.tableStatus")}</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-3 py-6 text-center text-[#2C4E7A]/75">
-                    No orders in this view.
+                    {t("orders.noOrders")}
                   </td>
                 </tr>
               ) : (
@@ -235,7 +232,7 @@ export default function ManualServicesAdminClient(props: {
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">{o.units}</td>
                     <td className="whitespace-nowrap px-3 py-2 font-semibold text-[#1F3A5F]">${o.totalUsd}</td>
                     <td className="max-w-[220px] px-3 py-2 text-[#2C4E7A]/90">
-                      {o.clientNote ?? "—"}
+                      {o.clientNote ?? t("orders.none")}
                     </td>
                     <td className="px-3 py-2">
                       <select
@@ -253,8 +250,8 @@ export default function ManualServicesAdminClient(props: {
                           });
                         }}
                       >
-                        <option value="ORDERED">Ordered</option>
-                        <option value="DONE">Done</option>
+                        <option value="ORDERED">{t("orders.statusOrdered")}</option>
+                        <option value="DONE">{t("orders.statusDone")}</option>
                       </select>
                     </td>
                   </tr>
@@ -274,6 +271,7 @@ function ServiceEditRow(props: {
   startTransition: (fn: () => void) => void;
   onFlash: (msg: string) => void;
 }) {
+  const t = useTranslations("adminManualServices");
   const [name, setName] = useState(props.initial.name);
   const [description, setDescription] = useState(props.initial.description);
   const [unitPriceUsd, setUnitPriceUsd] = useState(props.initial.unitPriceUsd);
@@ -334,26 +332,26 @@ function ServiceEditRow(props: {
                 sort: Number(sort),
               });
               if (!res.ok) props.onFlash(res.message);
-              else props.onFlash("Saved.");
+              else props.onFlash(t("flash.saved"));
             });
           }}
         >
-          Save
+          {t("services.save")}
         </button>
         <button
           type="button"
           disabled={props.pending}
           className="rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 disabled:opacity-60"
           onClick={() => {
-            if (!window.confirm("Delete this service? Only allowed if it has no orders.")) return;
+            if (!window.confirm(t("services.deleteConfirm"))) return;
             props.startTransition(async () => {
               const res = await deleteCustomServiceAction({ id: props.initial.id });
               if (!res.ok) props.onFlash(res.message);
-              else props.onFlash("Deleted.");
+              else props.onFlash(t("flash.deleted"));
             });
           }}
         >
-          Delete
+          {t("services.delete")}
         </button>
       </td>
     </tr>

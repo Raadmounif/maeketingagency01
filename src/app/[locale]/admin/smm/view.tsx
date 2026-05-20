@@ -261,17 +261,12 @@ function ClientCategoriesManager({
 
   return (
     <div>
-      <div className="text-sm font-semibold text-[#1F3A5F]">Client categories</div>
-      <p className="mt-2 text-xs text-[#2C4E7A]/80">
-        Optional client categories on <span className="font-semibold">/trust</span>: each enabled category appears as
-        one <span className="font-semibold">Featured offer</span> card (a single product). The trust page still lists
-        every API service enabled for clients in the main order form and under provider categories. Assign services
-        here for the offer card and for per-item markup % (overrides global/category pricing when applicable).
-      </p>
+      <div className="text-sm font-semibold text-[#1F3A5F]">{t("offers.sectionTitle")}</div>
+      <p className="mt-2 text-xs text-[#2C4E7A]/80">{t("offers.help")}</p>
 
       <div className="mt-5 grid gap-4 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4 lg:grid-cols-5">
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Name (EN)</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.nameEn")}</div>
           <input
             value={createNameEn}
             onChange={(e) => setCreateNameEn(e.target.value)}
@@ -279,7 +274,7 @@ function ClientCategoriesManager({
           />
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Name (AR)</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.nameAr")}</div>
           <input
             value={createNameAr}
             onChange={(e) => setCreateNameAr(e.target.value)}
@@ -287,7 +282,7 @@ function ClientCategoriesManager({
           />
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Sort</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.sort")}</div>
           <input
             value={createSort}
             onChange={(e) => setCreateSort(e.target.value)}
@@ -296,7 +291,7 @@ function ClientCategoriesManager({
           />
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Offer price (USD)</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.offerPriceUsd")}</div>
           <input
             value={createOfferPriceUsd}
             onChange={(e) => setCreateOfferPriceUsd(e.target.value)}
@@ -311,7 +306,7 @@ function ClientCategoriesManager({
               checked={createEnabled}
               onChange={(e) => setCreateEnabled(e.target.checked)}
             />
-            Enabled
+            {t("offers.enabled")}
           </label>
           <button
             type="button"
@@ -319,20 +314,20 @@ function ClientCategoriesManager({
             onClick={createCategory}
             className="inline-flex h-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-4 text-xs font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105 disabled:opacity-60"
           >
-            Create
+            {t("offers.create")}
           </button>
         </div>
       </div>
 
       <div className="mt-5 grid gap-4 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4 lg:grid-cols-5">
         <label className="block lg:col-span-2">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Category</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.category")}</div>
           <select
             value={addCategoryId}
             onChange={(e) => setAddCategoryId(e.target.value)}
             className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("offers.choose")}</option>
             {cats.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nameEn} / {c.nameAr}
@@ -341,13 +336,13 @@ function ClientCategoriesManager({
           </select>
         </label>
         <label className="block lg:col-span-2">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Service</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.service")}</div>
           <select
             value={addServiceId}
             onChange={(e) => setAddServiceId(e.target.value)}
             className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("offers.choose")}</option>
             {allServices.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -356,7 +351,7 @@ function ClientCategoriesManager({
           </select>
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Markup %</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.markupPct")}</div>
           <input
             value={addMarkupPct}
             onChange={(e) => setAddMarkupPct(e.target.value)}
@@ -365,7 +360,7 @@ function ClientCategoriesManager({
           />
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Offer quantity</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.offerQuantity")}</div>
           <input
             value={addOfferQuantity}
             onChange={(e) => setAddOfferQuantity(e.target.value)}
@@ -374,7 +369,7 @@ function ClientCategoriesManager({
           />
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Sort</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.sort")}</div>
           <input
             value={addSort}
             onChange={(e) => setAddSort(e.target.value)}
@@ -389,20 +384,20 @@ function ClientCategoriesManager({
             onClick={addService}
             className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
           >
-            Add to category
+            {t("offers.addToCategory")}
           </button>
         </div>
       </div>
 
       <div className="mt-4 grid gap-4 rounded-xl border border-[#2C4E7A]/10 bg-[#F5F7FA] p-4 lg:grid-cols-5">
         <label className="block lg:col-span-2">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Category</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.category")}</div>
           <select
             value={addManualCategoryId}
             onChange={(e) => setAddManualCategoryId(e.target.value)}
             className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("offers.choose")}</option>
             {cats.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nameEn} / {c.nameAr}
@@ -411,23 +406,23 @@ function ClientCategoriesManager({
           </select>
         </label>
         <label className="block lg:col-span-2">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Manual service</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.manualService")}</div>
           <select
             value={addCustomServiceId}
             onChange={(e) => setAddCustomServiceId(e.target.value)}
             className="mt-2 h-10 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 focus:ring-4"
           >
-            <option value="">Choose…</option>
+            <option value="">{t("offers.choose")}</option>
             {manualServices.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
-                {s.enabled ? "" : " (disabled)"}
+                {s.enabled ? "" : t("offers.disabledSuffix")}
               </option>
             ))}
           </select>
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Units</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.units")}</div>
           <input
             value={addOfferUnits}
             onChange={(e) => setAddOfferUnits(e.target.value)}
@@ -436,7 +431,7 @@ function ClientCategoriesManager({
           />
         </label>
         <label className="block">
-          <div className="text-xs font-semibold text-[#1F3A5F]">Sort</div>
+          <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.sort")}</div>
           <input
             value={addManualSort}
             onChange={(e) => setAddManualSort(e.target.value)}
@@ -451,20 +446,20 @@ function ClientCategoriesManager({
             onClick={addManualService}
             className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
           >
-            Add manual
+            {t("offers.addManual")}
           </button>
         </div>
       </div>
 
       <div className="mt-6 space-y-4">
         {cats.length === 0 ? (
-          <div className="text-sm text-[#2C4E7A]/80">No client categories yet.</div>
+          <div className="text-sm text-[#2C4E7A]/80">{t("offers.noCategories")}</div>
         ) : (
           cats.map((c) => (
             <div key={c.id} className="rounded-xl border border-[#2C4E7A]/12 bg-white">
               <div className="grid gap-3 border-b border-[#2C4E7A]/10 bg-[#F5F7FA] p-4 md:grid-cols-5">
                 <label className="block md:col-span-2">
-                  <div className="text-xs font-semibold text-[#1F3A5F]">Name (EN)</div>
+                  <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.nameEn")}</div>
                   <input
                     value={c.nameEn}
                     onChange={(e) =>
@@ -476,7 +471,7 @@ function ClientCategoriesManager({
                   />
                 </label>
                 <label className="block md:col-span-2">
-                  <div className="text-xs font-semibold text-[#1F3A5F]">Name (AR)</div>
+                  <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.nameAr")}</div>
                   <input
                     value={c.nameAr}
                     onChange={(e) =>
@@ -488,7 +483,7 @@ function ClientCategoriesManager({
                   />
                 </label>
                 <label className="block">
-                  <div className="text-xs font-semibold text-[#1F3A5F]">Sort</div>
+                  <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.sort")}</div>
                   <input
                     value={String(c.sort)}
                     onChange={(e) =>
@@ -503,7 +498,7 @@ function ClientCategoriesManager({
                   />
                 </label>
                 <label className="block">
-                  <div className="text-xs font-semibold text-[#1F3A5F]">Offer price (USD)</div>
+                  <div className="text-xs font-semibold text-[#1F3A5F]">{t("offers.offerPriceUsd")}</div>
                   <input
                     value={c.offerPriceUsd}
                     onChange={(e) =>
@@ -528,7 +523,7 @@ function ClientCategoriesManager({
                         )
                       }
                     />
-                    Enabled
+                    {t("offers.enabled")}
                   </label>
                   <div className="flex gap-2">
                     <button
@@ -537,7 +532,7 @@ function ClientCategoriesManager({
                       onClick={() => saveCategory(cats.find((x) => x.id === c.id) ?? c)}
                       className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
                     >
-                      Save
+                      {t("offers.save")}
                     </button>
                     <button
                       type="button"
@@ -545,7 +540,7 @@ function ClientCategoriesManager({
                       onClick={() => deleteCategory(c.id)}
                       className="inline-flex h-10 items-center justify-center rounded-xl border border-red-500/20 bg-white px-4 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-50 disabled:opacity-60"
                     >
-                      Delete
+                      {t("offers.delete")}
                     </button>
                   </div>
                 </div>
@@ -553,7 +548,7 @@ function ClientCategoriesManager({
 
               <div className="divide-y divide-[#2C4E7A]/10">
                 {c.items.length === 0 && c.manualItems.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-[#2C4E7A]/80">No services assigned.</div>
+                  <div className="px-4 py-3 text-sm text-[#2C4E7A]/80">{t("offers.noServicesAssigned")}</div>
                 ) : null}
 
                 {c.items.map((it) => (
@@ -563,8 +558,12 @@ function ClientCategoriesManager({
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-[#1F3A5F]">{it.serviceName}</div>
-                      <div className="mt-1 text-xs text-[#2C4E7A]/75">Markup: {it.markupPct}%</div>
-                      <div className="mt-1 text-xs text-[#2C4E7A]/75">Offer quantity: {it.offerQuantity}</div>
+                      <div className="mt-1 text-xs text-[#2C4E7A]/75">
+                        {t("offers.markupLabel", { pct: it.markupPct })}
+                      </div>
+                      <div className="mt-1 text-xs text-[#2C4E7A]/75">
+                        {t("offers.offerQtyLabel", { qty: it.offerQuantity })}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -572,7 +571,7 @@ function ClientCategoriesManager({
                       onClick={() => removeItem(it.id)}
                       className="inline-flex h-9 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
                     >
-                      Remove
+                      {t("offers.remove")}
                     </button>
                   </div>
                 ))}
@@ -584,9 +583,12 @@ function ClientCategoriesManager({
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-[#1F3A5F]">
-                        {it.customServiceName} <span className="text-xs font-medium text-[#2C4E7A]/70">(manual)</span>
+                        {it.customServiceName}{" "}
+                        <span className="text-xs font-medium text-[#2C4E7A]/70">{t("offers.manualTag")}</span>
                       </div>
-                      <div className="mt-1 text-xs text-[#2C4E7A]/75">Units: {it.offerUnits}</div>
+                      <div className="mt-1 text-xs text-[#2C4E7A]/75">
+                        {t("offers.unitsLabel", { units: it.offerUnits })}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -594,7 +596,7 @@ function ClientCategoriesManager({
                       onClick={() => removeManualItem(it.id)}
                       className="inline-flex h-9 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-3 text-xs font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA] disabled:opacity-60"
                     >
-                      Remove
+                      {t("offers.remove")}
                     </button>
                   </div>
                 ))}

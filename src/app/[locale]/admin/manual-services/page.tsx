@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { Link } from "@/i18n/routing";
+import { getTranslations } from "next-intl/server";
 import ManualServicesAdminClient from "./view";
 
 export default async function ManualServicesAdminPage() {
   await requireRole(["PLATFORM_ADMIN", "SERVICE_OWNER"]);
+  const t = await getTranslations("adminManualServices.page");
 
   const services = await prisma.customService.findMany({
     orderBy: [{ sort: "asc" }, { createdAt: "desc" }],
@@ -25,15 +27,10 @@ export default async function ManualServicesAdminPage() {
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-[#2C4E7A]/70">
-              Admin
+              {t("crumb")}
             </div>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#1F3A5F]">
-              Manual services
-            </h1>
-            <p className="mt-2 max-w-2xl text-[#2C4E7A]/90">
-              Add services that are not in the provider catalog. Track client orders and mark them
-              done when fulfilled.
-            </p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#1F3A5F]">{t("title")}</h1>
+            <p className="mt-2 max-w-2xl text-[#2C4E7A]/90">{t("subtitle")}</p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -41,13 +38,13 @@ export default async function ManualServicesAdminPage() {
               href="/admin"
               className="inline-flex h-11 items-center justify-center rounded-xl border border-[#2C4E7A]/20 bg-white px-5 text-sm font-semibold text-[#1F3A5F] shadow-sm transition hover:bg-[#F5F7FA]"
             >
-              Back to Admin
+              {t("backToAdmin")}
             </Link>
             <Link
               href="/trust#manual-services"
               className="inline-flex h-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#FF8C00] to-[#FFB347] px-5 text-sm font-semibold text-[#1F3A5F] shadow-md shadow-orange-500/20 transition hover:brightness-105"
             >
-              View on SMM Growth
+              {t("viewOnTrust")}
             </Link>
           </div>
         </div>

@@ -56,11 +56,31 @@ export function PaymentRequestsSection({
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [requestFilter, setRequestFilter] = useState<"PENDING" | "APPROVED" | "ALL">("PENDING");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredRequests = useMemo(() => {
-    if (requestFilter === "ALL") return requests;
-    return requests.filter((r) => r.status === requestFilter);
-  }, [requests, requestFilter]);
+    const byStatus =
+      requestFilter === "ALL" ? requests : requests.filter((r) => r.status === requestFilter);
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return byStatus;
+
+    return byStatus.filter((r) => {
+      const amountText = formatPaymentRequestAmount(r).toLowerCase();
+      const haystack = [
+        r.trackingCode,
+        r.userEmail,
+        r.userName ?? "",
+        r.methodName,
+        r.status,
+        r.clientNote ?? "",
+        r.id,
+        amountText,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [requests, requestFilter, searchQuery]);
 
   function flash(m: string) {
     setMessage(m);
@@ -88,9 +108,23 @@ export function PaymentRequestsSection({
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <p className="text-sm text-[#2C4E7A]">{t("requests.help")}</p>
-        <label className="text-sm text-[#1F3A5F]">
+      <p className="mt-2 text-sm text-[#2C4E7A]">{t("requests.help")}</p>
+
+      <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <label className="block flex-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#2C4E7A]/70">
+            {t("requests.searchLabel")}
+          </span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("requests.searchPlaceholder")}
+            disabled={pending}
+            className="mt-1.5 h-11 w-full rounded-xl border border-[#2C4E7A]/20 bg-white px-4 text-sm text-[#1F3A5F] shadow-sm outline-none ring-orange-500/10 placeholder:text-[#2C4E7A]/60 focus:ring-4 lg:max-w-md"
+          />
+        </label>
+        <label className="text-sm text-[#1F3A5F] lg:shrink-0">
           <span className="mr-2 font-medium">{t("requests.show")}</span>
           <select
             className="rounded-lg border border-[#2C4E7A]/20 bg-white px-3 py-2"
@@ -104,6 +138,10 @@ export function PaymentRequestsSection({
           </select>
         </label>
       </div>
+
+      <p className="mt-2 text-xs font-medium text-[#2C4E7A]/75">
+        {t("requests.showingCount", { count: filteredRequests.length })}
+      </p>
 
       <div className="mt-4 overflow-x-auto rounded-lg border border-[#2C4E7A]/12 bg-white">
         <table className="min-w-full text-left text-sm text-[#1F3A5F]">
@@ -124,7 +162,9 @@ export function PaymentRequestsSection({
             {filteredRequests.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-3 py-6 text-center text-[#2C4E7A]">
-                  {t("requests.noRequests")}
+                  {searchQuery.trim()
+                    ? t("requests.noSearchResults")
+                    : t("requests.noRequests")}
                 </td>
               </tr>
             ) : (
